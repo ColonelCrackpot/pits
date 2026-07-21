@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>INTO THE PITS — Privacy Policy</title>
+<style>
+  body {
+    margin: 0; padding: 32px 20px 60px; background: #0d0a0e; color: #e3cdd0;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.65;
+  }
+  main { max-width: 680px; margin: 0 auto; }
+  h1 { color: #ff3b47; font-size: 28px; }
+  h2 { color: #ffb84d; font-size: 18px; margin-top: 28px; }
+  a { color: #ff9d6b; }
+  .back { display: inline-block; margin-bottom: 18px; }
+  button {
+    font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
+    border-radius: 8px; padding: 10px 16px; border: 1px solid rgba(201,154,160,0.4);
+    background: transparent; color: #c99aa0;
+  }
+  .note { font-size: 13px; color: #c99aa0; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← back to the game</a>
+  <span class="note" style="margin-left:10px"><a href="guide.html">Game guide</a> · <a href="updates.html">Updates</a></span>
+  <h1>INTO THE PITS — Privacy Policy</h1>
+  <p class="note">Last updated: 20 July 2026</p>
+
+  <h2>Who we are</h2>
+  <p>INTO THE PITS is a free browser game. Contact:
+  <a href="mailto:colonalk@gmail.com">colonalk@gmail.com</a>.</p>
+
+  <h2>What we store on your device</h2>
+  <p>Your game progress (gold, best score and time, upgrades, abilities, your character's look,
+  settings) is saved in your browser's <em>localStorage</em>, on your device only. We run no
+  accounts. Clearing your browser data erases it.</p>
+
+  <h2>The scoreboard</h2>
+  <p>If — and only if — you set a pit name in the scoreboard panel, we store that name, your
+  best survival time, and a random anonymous player id on our leaderboard database (hosted by
+  Supabase) so your entry can appear on the global board. The id is generated on your device
+  and is not linked to your identity; we never collect your email, IP-based profile, or any
+  personal details. Don't set a pit name and nothing is ever sent. To have an entry removed,
+  email us the pit name and we'll delete it.</p>
+
+  <h2>Advertising</h2>
+  <p>The game is funded by ads served by <strong>Google AdSense / Google H5 Games
+  Ads</strong>. When you first play, you choose between <strong>personalized</strong>
+  and <strong>non-personalized</strong> ads. With non-personalized ads, Google does
+  not use your browsing history for targeting, but may still use cookies or device
+  identifiers for frequency capping, fraud prevention, and aggregate reporting.
+  See <a href="https://policies.google.com/technologies/partner-sites" rel="noopener"
+  target="_blank">how Google uses data from partner sites</a>.</p>
+
+  <h2>Change your ad choice</h2>
+  <p>Your choice is stored on your device. Reset it here, then reload the game to
+  pick again:</p>
+  <p><button id="resetConsent">Reset my ad choice</button>
+  <span id="resetMsg" class="note"></span></p>
+
+  <h2>Analytics</h2>
+  <p>We use no analytics or tracking of our own.</p>
+
+  <h2>Children</h2>
+  <p>The game depicts cartoon stick-figure moshing and is suitable for general audiences.
+  It collects no personal information itself.</p>
+</main>
+<script>
+  document.getElementById('resetConsent').addEventListener('click', () => {
+    try { localStorage.removeItem('pits_ad_consent'); } catch (e) {}
+    document.getElementById('resetMsg').textContent = 'Done — reload the game to choose again.';
+  });
+</script>
+</body>
+</html>

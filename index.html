@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0a0e">
+<title>INTO THE PITS — mosh pit survival</title>
+<meta name="google-adsense-account" content="ca-pub-6716374157787378" />
+<meta name="description" content="INTO THE PITS — a free browser game. You're a metalhead at a concert: dive into the pit, swing at everything that moves, survive the Wall of Death and climb the pit hierarchy. No install, no account.">
+<meta property="og:title" content="INTO THE PITS — mosh pit survival">
+<meta property="og:description" content="A free browser brawler: survive the mosh pit, dodge the Wall of Death, take down Skinny Jean Gene, become a Pit Legend.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤘</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="muteBtn">🔊</button>
+<div id="stick"><div id="nub"></div></div>
+<button id="swingBtn">🤘</button>
+<button class="abBtn" id="abKick" style="bottom: calc(env(safe-area-inset-bottom, 0px) + 130px)">🦵</button>
+<button class="abBtn" id="abWind" style="bottom: calc(env(safe-area-inset-bottom, 0px) + 196px)">🌀</button>
+<button class="abBtn" id="abBerserk" style="bottom: calc(env(safe-area-inset-bottom, 0px) + 262px)">😤</button>
+
+<div class="overlay" id="menuOv">
+  <div class="panel">
+    <div class="logo">🤘</div>
+    <h1>INTO THE<br>PITS</h1>
+    <div class="sub">MOSH PIT SURVIVAL</div>
+    <p class="hint" id="menuHint">The band's playing. The pit is open. <b>Move</b> with WASD, <b>swing</b> with SPACE or click.
+    Knock out moshers for <b>CRED</b> — and watch for the <b>WALL&nbsp;OF&nbsp;DEATH</b>.</p>
+    <div class="best" id="bestLine"></div>
+    <div class="credbar">🤘 <span id="menuCred">0</span> CRED</div>
+    <button class="btn alt" id="styleBtn">🎨 STYLE</button>
+    <button class="btn alt" id="boardBtnM">🏆 SCOREBOARD</button>
+    <div id="styleBox" style="display:none">
+      <canvas id="stylePrev" width="120" height="150"></canvas>
+      <div id="styleRows"></div>
+    </div>
+    <div class="sect">UPGRADES</div>
+    <div id="upList"></div>
+    <div class="sect">ABILITIES</div>
+    <div id="abList"></div>
+    <button class="btn" id="startBtn">ENTER THE PIT</button>
+    <div class="flinks">
+      <a href="guide.html">Game guide</a> · <a href="updates.html">Updates</a> · <a href="privacy.html">Privacy</a>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="boardOv" style="display:none">
+  <div class="panel">
+    <h2 style="color:#ffb84d">🏆 PIT LEGENDS</h2>
+    <div class="namerow">
+      <input id="nameInp" maxlength="16" placeholder="your pit name" autocomplete="off">
+      <button class="buy" id="nameSave">SAVE</button>
+    </div>
+    <div id="boardList" class="blist">loading…</div>
+    <button class="btn" id="boardBack">DONE</button>
+  </div>
+</div>
+
+<div class="overlay" id="overOv" style="display:none">
+  <div class="panel">
+    <h2 id="overTitle">CARRIED OUT</h2>
+    <div class="stats" id="overStats"></div>
+    <button class="btn alt" id="dblBtn">🎬 Double this set's cred</button><br>
+    <button class="btn" id="againBtn">MOSH AGAIN</button>
+    <button class="btn alt" id="menuBtn">UPGRADES</button>
+    <button class="btn alt" id="boardBtnO">🏆</button>
+  </div>
+</div>
+
+<!-- Classic scripts sharing top-level scope; order matters (each file may use
+     anything ABOVE it at load time, and anything at all at call time). -->
+<script src="js/util.js"></script>
+<script src="js/config.js"></script>
+<script src="js/save.js"></script>
+<script src="js/world.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ads.js"></script>
+<script src="js/board.js"></script>
+<script src="js/state.js"></script>
+<script src="js/moshers.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/abilities.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/events.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/flow.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="js/dev.js"></script>
+</body>
+</html>
