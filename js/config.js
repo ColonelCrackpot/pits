@@ -6,15 +6,48 @@
 // 2.5D world: floor plane (x, z), z=0 at the front edge, z=D at the stage.
 const D = 620, HALFW = 400, CD = 760;
 
+// Upgrades are INFINITE — the exponential cost curve is the only ceiling.
 const UPG = [
-  { id: 'fists', icon: '👊', name: 'Iron Fists',    desc: '+8 punch damage',              base: 40,  max: 6 },
-  { id: 'fast',  icon: '🥁', name: 'Fast Hands',    desc: '+12% punch speed',             base: 55,  max: 6 },
-  { id: 'skull', icon: '🪖', name: 'Thick Skull',   desc: '+25 max health',               base: 40,  max: 6 },
-  { id: 'boots', icon: '🥾', name: 'Steel Toes',    desc: '+10% move speed',              base: 50,  max: 5 },
-  { id: 'reach', icon: '💪', name: 'Windmill Arms', desc: '+15% punch reach & knockback', base: 60,  max: 5 },
-  { id: 'pres',  icon: '🤘', name: 'Pit Presence',  desc: '+20% gold earned',             base: 80,  max: 4 },
-  { id: 'wind',  icon: '⚡', name: 'Second Wind',   desc: 'Get back up once per set',     base: 150, max: 2 },
+  { id: 'fists', icon: '👊', name: 'Iron Fists',    desc: '+8 punch damage',              base: 40  },
+  { id: 'fast',  icon: '🥁', name: 'Fast Hands',    desc: '+12% punch speed',             base: 55  },
+  { id: 'skull', icon: '🪖', name: 'Thick Skull',   desc: '+25 max health',               base: 40  },
+  { id: 'boots', icon: '🥾', name: 'Steel Toes',    desc: '+10% move speed',              base: 50  },
+  { id: 'reach', icon: '💪', name: 'Windmill Arms', desc: '+15% punch reach & knockback', base: 60  },
+  { id: 'pres',  icon: '🤘', name: 'Pit Presence',  desc: '+20% gold earned',             base: 80  },
+  { id: 'wind',  icon: '⚡', name: 'Second Wind',   desc: 'Get back up once per set',     base: 150 },
 ];
+
+// ---- venues: infinite purchasable levels, each one a harder, re-skinned pit ----
+// Enemy stats scale so a maxed-out venue-N player feels like a fresh venue-1
+// player when they step up (hp/dmg track the player's realistic power curve;
+// gold scales too so the infinite upgrade treadmill keeps pace).
+const VENUE_SCALE = { hp: 4, dmg: 2.5, gold: 3, speed: 1.06 };
+const VENUE_COST = v => Math.round(100 * Math.pow(5, v - 1));   // cost to unlock venue v+1... indexed from current
+const VENUES = [
+  { name: 'The Basement',   wall: ['#08060a', '#160d14'], plat: ['#1c1218', '#2a1a22', '#0d090c'],
+    floor: ['#221722', '#191019', '#0e0910'], beams: ['#ff3b47', '#ffb84d', '#8fd3ff', '#c86bff'],
+    pools: ['255,60,70', '255,180,80', '120,180,255'] },
+  { name: 'Club Inferno',   wall: ['#0d0405', '#1f0a08'], plat: ['#241010', '#381812', '#120606'],
+    floor: ['#2a120e', '#1c0c0a', '#100605'], beams: ['#ff3b1e', '#ff7a2e', '#ffd166', '#ff3b47'],
+    pools: ['255,80,40', '255,140,40', '255,60,60'] },
+  { name: 'The Warehouse',  wall: ['#05070a', '#0d1218'], plat: ['#141a20', '#1e262e', '#090c10'],
+    floor: ['#161d24', '#101519', '#0a0d10'], beams: ['#8fd3ff', '#4da3ff', '#e8f4ff', '#5ee0c8'],
+    pools: ['120,180,255', '90,220,200', '200,230,255'] },
+  { name: 'Festival Night', wall: ['#070410', '#150a24'], plat: ['#1c1230', '#2a1c46', '#0e0818'],
+    floor: ['#241940', '#181030', '#0e0a1c'], beams: ['#c86bff', '#7bff9e', '#ff6bd8', '#ffd166'],
+    pools: ['200,120,255', '120,255,160', '255,110,220'] },
+  { name: 'The Cathedral',  wall: ['#0a0804', '#1c1408'], plat: ['#241c0c', '#382c14', '#100c06'],
+    floor: ['#2a2210', '#1c160c', '#100c06'], beams: ['#ffd166', '#ffb84d', '#fff2cc', '#ff9d3a'],
+    pools: ['255,210,100', '255,170,60', '255,240,190'] },
+  { name: 'Neon Dive',      wall: ['#020608', '#04121a'], plat: ['#062028', '#0a303c', '#031014'],
+    floor: ['#083038', '#062028', '#031014'], beams: ['#00ffd5', '#ff00aa', '#00aaff', '#c8ff00'],
+    pools: ['0,255,210', '255,0,170', '0,170,255'] },
+];
+const ROMAN = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
+function venueName(v) {
+  const cyc = Math.floor((v - 1) / VENUES.length);
+  return VENUES[(v - 1) % VENUES.length].name + (cyc < ROMAN.length ? ROMAN[cyc] : ' ' + (cyc + 1));
+}
 
 // You punch automatically; abilities are the buttons. Equip up to 4 — they map
 // to SPACE / Q / E / R in loadout order (touch: the four round buttons).
@@ -45,7 +78,7 @@ const ABILITIES = [
     desc: 'One full spin — boot everyone around you', unlock: 300, base: 240, max: 3,
     cd: l => 12 - l },
   { id: 'change', icon: '🪙', name: 'Throw Change',
-    desc: 'Fling 5 gold in their faces — staggers the crowd', unlock: 100, base: 140, max: 3,
+    desc: 'Fling 2 gold in their faces — staggers the crowd', unlock: 100, base: 140, max: 3,
     cd: l => 6 - 0.5 * l },
   { id: 'berserk', icon: '😤', name: 'Berserk',
     desc: 'See red — hit harder, move faster, feel less', unlock: 400, base: 320, max: 3,
@@ -62,7 +95,8 @@ const SB = {
   anon: 'sb_publishable_EOsD2Wd8EPUTmMqhcfBQRQ_Fl-O4UKF',
   table: 'pits_scores',
   rpc: 'pits_submit_score',
-  maxSecs: 86400,   // MUST match max_secs in the SQL
+  maxSecs: 86400,      // MUST match max_secs in the SQL
+  maxScore: 1000000000,   // MUST match max_score in the SQL
 };
 
 // Same architecture as YPIM/JETT: one Ads API with a STUB backend.

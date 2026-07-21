@@ -14,7 +14,7 @@ function startSwing(m, dir) {
 function doStrike(att) {
   const dir = att.swing.dir;
   const reach = att.isPlayer ? pStats().reach : (att.reach || 26);
-  const dmgBase = att.isPlayer ? pStats().dmg : att.dmg;
+  const dmgBase = att.isPlayer ? pStats().dmg : att.dmg * (att.rageT > 0 ? 1.5 : 1);
   for (const m of moshers) {
     if (m === att || m.ko || m.dead) continue;
     const dx = m.x - att.x, dz = m.z - att.z, d = hyp(dx, dz) || 1;
@@ -60,14 +60,14 @@ function koMosher(m, att, dir) {
     combo++; comboT = 3;
     // SCORE rides the combo and pays instantly; GOLD hits the floor —
     // pickup change: you scoop what you knock loose
-    const sc = m.boss ? 1000 : 100 * combo;
-    const gold = Math.round((m.boss ? 100 : 10) * pStats().credMult);
+    const sc = (m.boss ? 1000 : 100 * combo) * save.venue;
+    const gold = Math.max(1, Math.round((m.boss ? 10 : 1) * pStats().credMult * venueMult('gold')));
     runScore += sc; runKos++;
-    spawnCoins(m.x, m.z, gold, m.boss ? 7 : 3);
+    spawnCoins(m.x, m.z, gold, m.boss ? 5 : 2);
     floats.push({ x: m.x, z: m.z, y: m.h + 14, txt: '+' + sc, t: 0, color: '#ffd166' });
     if (combo > 1 && !m.boss) floats.push({ x: m.x, z: m.z, y: m.h + 34, txt: combo + 'x!', t: 0, color: '#7bff9e' });
-  } else if (!m.isPlayer && state === 'run') {
-    spawnCoins(m.x, m.z, 3, 1);   // ambient KOs shake a little change loose too
+  } else if (!m.isPlayer && state === 'run' && Math.random() < 0.5) {
+    spawnCoins(m.x, m.z, Math.max(1, Math.round(venueMult('gold'))), 1);   // ambient KOs shake a little loose
   }
 }
 function spawnCoins(x, z, total, n) {

@@ -159,12 +159,12 @@ const ABILITY_IMPL = {
   },
   change: {  // fling a fistful of gold — cheap, staggers everyone in the cone
     use(a, l, st) {
-      if (runCred < 5) {
-        floats.push({ x: player.x, z: player.z, y: 70, txt: 'need 5 🤘', t: 0, color: '#ff8f6b' });
+      if (runCred < 2) {
+        floats.push({ x: player.x, z: player.z, y: 70, txt: 'need 2 🤘', t: 0, color: '#ff8f6b' });
         st.cd = 0.4;   // don't burn the real cooldown
         return;
       }
-      runCred -= 5;
+      runCred -= 2;
       const f = player.face;
       for (const m of moshers) {
         if (m.isPlayer || m.ko || m.dead || m.boss) continue;   // bosses don't care about money

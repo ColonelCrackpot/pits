@@ -79,7 +79,8 @@ h2 { margin: 0 0 6px; font-size: 26px; color: #ff8f6b; }
 .brow.me { background: rgba(255,91,71,0.16); border: 1px solid rgba(255,91,71,0.4); }
 .brow .rk { width: 24px; color: #c99aa0; font-weight: 700; }
 .brow .nm { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-.brow .sc { color: #ffb84d; font-weight: 800; }
+.brow .sc { color: #ffd166; font-weight: 800; }
+.brow .tm { color: #c99aa0; font-weight: 700; font-size: 11.5px; min-width: 44px; text-align: right; }
 /* character style picker */
 .strow {
   display: flex; align-items: center; gap: 8px;
@@ -95,7 +96,21 @@ h2 { margin: 0 0 6px; font-size: 26px; color: #ff8f6b; }
   width: 30px; height: 30px; border-radius: 8px;
 }
 .sarrow:active { background: #5d4a68; }
+  .sarrow[disabled] { opacity: 0.3; cursor: default; }
 #stylePrev { display: block; margin: 4px auto 8px; background: rgba(255,255,255,0.04); border-radius: 12px; }
+.audiorow {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(220,120,130,0.25);
+  border-radius: 12px; padding: 8px 12px; margin-bottom: 6px;
+  font-size: 12.5px; font-weight: 700; color: #e3cdd0;
+}
+.audiorow label { flex: 0 0 84px; text-align: left; }
+.audiorow input[type=range] { flex: 1 1 auto; min-width: 0; accent-color: #ff5b47; }
+.buy.danger {
+  background: linear-gradient(#5a2430, #3a1420); color: #ff9d8a;
+  box-shadow: 0 3px 0 #200a10;
+}
+.buy.danger:active { box-shadow: 0 1px 0 #200a10; }
 .sect {
   font-size: 12px; letter-spacing: 2.5px; color: #c99aa0; font-weight: 800;
   margin: 14px 0 7px; text-align: center;

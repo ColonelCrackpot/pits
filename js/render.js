@@ -31,6 +31,15 @@ function render() {
     ctx.beginPath(); ctx.ellipse(pr.x, pr.y, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  for (const p of bossProjs) {   // incoming pocket debris
+    const pr = proj(p.x, p.z, p.y);
+    ctx.save();
+    ctx.translate(pr.x, pr.y);
+    ctx.rotate(p.t * 14);
+    ctx.fillStyle = '#8a7a5a';
+    ctx.fillRect(-4 * pr.s, -3 * pr.s, 8 * pr.s, 6 * pr.s);
+    ctx.restore();
+  }
   for (const p of particles) {
     const pr = proj(p.x, p.z, p.y);
     ctx.globalAlpha = 1 - p.t / p.dur;
@@ -84,13 +93,14 @@ function drawStage(beat) {
   const stY = syAt(D);              // stage front edge on screen
   const stTop = stY - H * 0.16;     // platform top
   // back wall
+  const T = curTheme();
   const wall = ctx.createLinearGradient(0, 0, 0, stY);
-  wall.addColorStop(0, '#08060a');
-  wall.addColorStop(1, '#160d14');
+  wall.addColorStop(0, T.wall[0]);
+  wall.addColorStop(1, T.wall[1]);
   ctx.fillStyle = wall;
   ctx.fillRect(0, 0, W, stY);
   // light beams
-  const cols = ['#ff3b47', '#ffb84d', '#8fd3ff', '#c86bff'];
+  const cols = T.beams;
   const t = performance.now() / 1000;
   for (let i = 0; i < 4; i++) {
     const bx = W * (0.2 + 0.2 * i);
@@ -111,11 +121,11 @@ function drawStage(beat) {
   }
   ctx.globalAlpha = 1;
   // platform
-  ctx.fillStyle = '#1c1218';
+  ctx.fillStyle = T.plat[0];
   ctx.fillRect(0, stTop, W, stY - stTop);
-  ctx.fillStyle = '#2a1a22';
+  ctx.fillStyle = T.plat[1];
   ctx.fillRect(0, stTop, W, 5);
-  ctx.fillStyle = '#0d090c';
+  ctx.fillStyle = T.plat[2];
   ctx.fillRect(0, stY - 4, W, 4);
   // speaker stacks
   for (const side of [0.06, 0.94]) {
@@ -184,15 +194,16 @@ function drawBander(x, footY, sc, beat, role) {
 }
 function drawFloor(beat) {
   const stY = syAt(D);
+  const T = curTheme();
   const fl = ctx.createLinearGradient(0, stY, 0, H);
-  fl.addColorStop(0, '#221722');
-  fl.addColorStop(0.5, '#191019');
-  fl.addColorStop(1, '#0e0910');
+  fl.addColorStop(0, T.floor[0]);
+  fl.addColorStop(0.5, T.floor[1]);
+  fl.addColorStop(1, T.floor[2]);
   ctx.fillStyle = fl;
   ctx.fillRect(0, stY, W, H - stY);
   // colored light pools sweeping the pit
   const t = performance.now() / 1000;
-  const cols = ['rgba(255,60,70,', 'rgba(255,180,80,', 'rgba(120,180,255,'];
+  const cols = T.pools.map(c => 'rgba(' + c + ',');
   for (let i = 0; i < 3; i++) {
     const px = Math.sin(t * 0.7 + i * 2.1) * 0.35 * W + W / 2;
     const pz = D * (0.3 + 0.25 * Math.sin(t * 0.5 + i * 1.4) + 0.25);
@@ -303,6 +314,7 @@ function drawFrontCrowd(beat) {
 function drawMosher(m) {
   const pr = proj(m.x, m.z, 0);
   const s = pr.s;
+  if ((m.blinkT || 0) > 0) ctx.globalAlpha = 0.3 + 0.35 * Math.abs(Math.sin(performance.now() / 45));
   const T = MOSHER_TYPES[m.type || 'punk'];
   // shadow
   ctx.fillStyle = 'rgba(0,0,0,.42)';
@@ -310,7 +322,7 @@ function drawMosher(m) {
   ctx.ellipse(pr.x, pr.y, m.r * s * 1.1, m.r * s * 0.42, 0, 0, 6.28);
   ctx.fill();
   if (T && T.draw) { T.draw(m, pr, s); return; }   // boss/special body override
-  if (m.isPlayer && !m.ko && abState.berserk.t > 0) {
+  if (!m.ko && (m.isPlayer ? abState.berserk.t > 0 : (m.rageT || 0) > 0)) {
     const rp = 0.6 + 0.4 * Math.sin(performance.now() / 90);
     const g = ctx.createRadialGradient(pr.x, pr.y - 30 * s, 4, pr.x, pr.y - 30 * s, 46 * s);
     g.addColorStop(0, `rgba(255,50,50,${0.22 * rp})`);
@@ -350,11 +362,28 @@ function drawMosher(m) {
       const b = px2(r[hnd].x, r[hnd].y);
       ctx.beginPath(); ctx.moveTo(nk.x, nk.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
+    // shoes stay on, even out cold
+    if (L.shoes) {
+      ctx.fillStyle = L.shoes;
+      for (const f of ['footL', 'footR']) {
+        const b = px2(r[f].x, r[f].y);
+        ctx.beginPath(); ctx.ellipse(b.x, b.y, 3.8 * s, 2 * s, 0, 0, 6.28); ctx.fill();
+      }
+    }
     // head
     const hd = px2(r.head.x, r.head.y + 3);
-    ctx.fillStyle = L.skin;
+    ctx.fillStyle = L.mask === 'gold' ? '#d9a92c' : L.skin;
     ctx.beginPath(); ctx.arc(hd.x, hd.y, 7 * s, 0, 6.28); ctx.fill();
-    if (!L.bald) {
+    if (L.mask === 'gold') {
+      ctx.fillStyle = '#a8760a';
+      for (const sgn of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(hd.x + sgn * 5 * s, hd.y - 3.5 * s);
+        ctx.lineTo(hd.x + sgn * 8.5 * s, hd.y - 10 * s);
+        ctx.lineTo(hd.x + sgn * 2 * s, hd.y - 6 * s);
+        ctx.closePath(); ctx.fill();
+      }
+    } else if (!L.bald) {
       ctx.fillStyle = L.hair;
       ctx.beginPath(); ctx.arc(hd.x, hd.y - 2 * s, 6.4 * s, Math.PI, 0); ctx.fill();
     }
@@ -394,6 +423,33 @@ function drawMosher(m) {
       mid = px2(kfx * 10, hipY * 0.55);
     }
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mid.x, mid.y, b.x, b.y); ctx.stroke();
+    if (L.shoes || L.slops) {   // boots / sneakers / slops on the feet
+      ctx.fillStyle = L.shoes || L.skin;
+      ctx.beginPath();
+      ctx.ellipse(b.x + kfx * 2.4 * s, b.y - 0.8 * s, 4.2 * s, 2.1 * s, 0, 0, 6.28);
+      ctx.fill();
+      if (L.slops) {   // the thin sole of a proud slop
+        ctx.strokeStyle = '#241a10';
+        ctx.lineWidth = Math.max(1, 1.1 * s);
+        ctx.beginPath();
+        ctx.moveTo(b.x - 2 * s, b.y + 1.2 * s);
+        ctx.lineTo(b.x + kfx * 5.5 * s, b.y + 1.2 * s);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = flash ? '#fff' : L.pants;
+      ctx.lineWidth = th;
+    }
+  }
+  // wallet chain swinging at the hip
+  if (L.chain) {
+    const a1 = px2(lean * 6 + kfx * 4, hipY - 1);
+    const b1 = px2(lean * 6 + kfx * 8 - m.vx * 0.006, hipY * 0.55);
+    ctx.strokeStyle = '#c8ccd6';
+    ctx.lineWidth = Math.max(1, 1.3 * s);
+    ctx.beginPath();
+    ctx.moveTo(a1.x, a1.y);
+    ctx.quadraticCurveTo((a1.x + b1.x) / 2 + kfx * 3 * s, (a1.y + b1.y) / 2 + 4 * s, b1.x, b1.y);
+    ctx.stroke();
   }
   // far arm (behind torso)
   const farArm = m.face.x >= 0 ? m.armL : m.armR;
@@ -404,6 +460,16 @@ function drawMosher(m) {
   ctx.lineWidth = th * 1.9;
   const hip = px2(lean * 6, hipY), neck = px2(neckU, neckY);
   ctx.beginPath(); ctx.moveTo(hip.x, hip.y); ctx.lineTo(neck.x, neck.y); ctx.stroke();
+  if (L.logo && !flash) {   // band logo on the shirt
+    ctx.save();
+    ctx.translate((hip.x + neck.x) / 2, (hip.y + neck.y) / 2);
+    ctx.rotate(Math.atan2(neck.x - hip.x, hip.y - neck.y) * 0.4);
+    ctx.font = '900 ' + Math.max(3.5, 4.4 * s) + 'px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = L.logoColor || '#ff2222';
+    ctx.fillText(L.logo, 0, 1.5 * s);
+    ctx.restore();
+  }
   // head — banging hard
   const bang = Math.sin(m.bangPhase) * (speed < 60 ? 0.9 : 0.35);
   const fx = m.face.x >= 0 ? 1 : -1;
@@ -412,23 +478,50 @@ function drawMosher(m) {
   m.headU = headU; m.headY = headY;
   const hd = px2(headU, headY);
   if (m.hair) {   // long hair hangs from the back of the skull, drawn behind the head
-    ctx.strokeStyle = flash ? '#fff' : L.hair;
     ctx.lineWidth = Math.max(2, 4.6 * s);
-    ctx.beginPath();
-    ctx.moveTo(hd.x - fx * 3 * s, hd.y - 3 * s);
-    for (const h of m.hair) {
-      const hp3 = px2(h.x, h.y);
-      ctx.lineTo(hp3.x, hp3.y);
+    let hx0 = hd.x - fx * 3 * s, hy0 = hd.y - 3 * s;
+    for (let i = 0; i < m.hair.length; i++) {
+      const hp3 = px2(m.hair[i].x, m.hair[i].y);
+      ctx.strokeStyle = flash ? '#fff' : (L.hairTip && i > 0 ? L.hairTip : L.hair);
+      ctx.beginPath(); ctx.moveTo(hx0, hy0); ctx.lineTo(hp3.x, hp3.y); ctx.stroke();
+      hx0 = hp3.x; hy0 = hp3.y;
     }
+  }
+  ctx.fillStyle = L.mask === 'gold' ? (flash ? '#fff' : '#d9a92c') : (flash ? '#fff' : L.skin);
+  ctx.beginPath(); ctx.arc(hd.x, hd.y, 7 * s, 0, 6.28); ctx.fill();
+  if (L.mask === 'gold' && !flash) {   // the gold devil mask
+    ctx.fillStyle = '#a8760a';
+    for (const sgn of [-1, 1]) {   // horns
+      ctx.beginPath();
+      ctx.moveTo(hd.x + sgn * 5.2 * s, hd.y - 4 * s);
+      ctx.lineTo(hd.x + sgn * 9 * s, hd.y - 11.5 * s);
+      ctx.lineTo(hd.x + sgn * 2.2 * s, hd.y - 6.4 * s);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = '#1a0e04';
+    ctx.lineWidth = Math.max(1, 1.2 * s);
+    for (const sgn of [-1, 1]) {   // angry eye slits
+      ctx.beginPath();
+      ctx.moveTo(hd.x + fx * 1.2 * s + sgn * 1.2 * s, hd.y - 1.2 * s - (sgn === (fx >= 0 ? 1 : -1) ? 1.2 : 0) * s);
+      ctx.lineTo(hd.x + fx * 1.2 * s + sgn * 4 * s, hd.y - 2.6 * s);
+      ctx.stroke();
+    }
+    ctx.beginPath();   // mouth grille
+    ctx.moveTo(hd.x + fx * 1.2 * s - 2.6 * s, hd.y + 3 * s);
+    ctx.lineTo(hd.x + fx * 1.2 * s + 3.4 * s, hd.y + 3 * s);
     ctx.stroke();
   }
-  ctx.fillStyle = flash ? '#fff' : L.skin;
-  ctx.beginPath(); ctx.arc(hd.x, hd.y, 7 * s, 0, 6.28); ctx.fill();
-  if (L.beard) {
+  if (L.beard && L.mask !== 'gold') {
     ctx.fillStyle = flash ? '#eee' : L.hair;
     ctx.beginPath(); ctx.arc(hd.x + fx * 1.5 * s, hd.y + 3.5 * s, 4 * s, 0, 6.28); ctx.fill();
   }
-  if (L.mohawk) {
+  if (m.hair && L.mask !== 'gold') {   // hairline cap for long-hair heads (roots colour)
+    ctx.fillStyle = flash ? '#fff' : L.hair;
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 2 * s, 6.6 * s, Math.PI, 0); ctx.fill();
+  }
+  if (L.mask === 'gold') {
+    // no hair styles over the mask
+  } else if (L.mohawk) {
     ctx.fillStyle = flash ? '#fff' : L.hair;
     ctx.beginPath();
     ctx.moveTo(hd.x - 6 * s, hd.y - 2 * s);
@@ -441,6 +534,30 @@ function drawMosher(m) {
   }
   // near arm (in front)
   drawArm(m, nearArm, s, px2, flash, false);
+  // the V guitar, slung in FRONT of the body (Luke's pride and joy)
+  if (L.prop === 'vguitar') {
+    const gx = px2(neckU + kfx * 5, hipY + 7);
+    ctx.save();
+    ctx.translate(gx.x, gx.y);
+    ctx.rotate(kfx * (-0.5 + Math.sin(m.bangPhase) * 0.06));
+    const u = s * 1.3;
+    ctx.strokeStyle = '#2a2018';
+    ctx.lineWidth = Math.max(2, 2 * u);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-kfx * 22 * u, -12 * u); ctx.stroke();
+    ctx.fillStyle = '#0d0b0e';   // headstock
+    ctx.fillRect(-kfx * 24 * u - (kfx > 0 ? 0 : 5 * u), -15 * u, 5 * u, 5 * u);
+    ctx.fillStyle = '#efe8dc';   // the white V
+    ctx.strokeStyle = '#141216';
+    ctx.lineWidth = Math.max(1, 1.1 * u);
+    ctx.beginPath();
+    ctx.moveTo(-kfx * 2 * u, -4 * u);
+    ctx.lineTo(kfx * 18 * u, 9 * u);
+    ctx.lineTo(kfx * 8.5 * u, 0.8 * u);
+    ctx.lineTo(kfx * 16 * u, -10 * u);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   if (m.boss) {   // boss nameplate + health bar
     const bw = 54 * s;
     const by = pr.y - (m.h + 22) * s;
@@ -465,19 +582,38 @@ function drawMosher(m) {
     ctx.lineTo(mk.x + 5 * s, mk.y + bob2 - 3 * s);
     ctx.closePath(); ctx.fill();
   }
+  ctx.globalAlpha = 1;
 }
 function drawArm(m, arm, s, px2, flash, far) {
   const th = Math.max(2, 3 * s) * (m.bulk ? 1 + (m.bulk - 1) * 0.7 : 1);
-  ctx.strokeStyle = flash ? '#fff' : (far ? shade(m.look.skin, -24) : m.look.skin);
+  const armCol = m.look.sleeves || m.look.skin;   // long-sleeve under-layer
+  ctx.strokeStyle = flash ? '#fff' : (far ? shade(armCol, -24) : armCol);
   ctx.lineWidth = th;
   const sh = px2(arm.sx || 0, arm.sy || m.h * 0.74);
   const el = px2(arm.ex, arm.ey), hn = px2(arm.hx, arm.hy);
   ctx.beginPath();
   ctx.moveTo(sh.x, sh.y); ctx.lineTo(el.x, el.y); ctx.lineTo(hn.x, hn.y);
   ctx.stroke();
-  // fist
-  ctx.fillStyle = ctx.strokeStyle;
+  // fist (always skin — sleeves end at the wrist)
+  ctx.fillStyle = flash ? '#fff' : (far ? shade(m.look.skin, -24) : m.look.skin);
   ctx.beginPath(); ctx.arc(hn.x, hn.y, th * 0.7, 0, 6.28); ctx.fill();
+  // studded armband on the upper arm
+  if (m.look.armband) {
+    const adx = el.x - sh.x, ady = el.y - sh.y, ad = Math.hypot(adx, ady) || 1;
+    const bx2 = sh.x + adx * 0.45, by2 = sh.y + ady * 0.45;
+    ctx.strokeStyle = m.look.armband;
+    ctx.lineWidth = th * 1.6;
+    ctx.beginPath();
+    ctx.moveTo(bx2 - adx / ad * 2.2 * s, by2 - ady / ad * 2.2 * s);
+    ctx.lineTo(bx2 + adx / ad * 2.2 * s, by2 + ady / ad * 2.2 * s);
+    ctx.stroke();
+    ctx.fillStyle = '#d8dce6';
+    for (const k of [-1.5, 0, 1.5]) {
+      ctx.beginPath();
+      ctx.arc(bx2 + adx / ad * k * s, by2 + ady / ad * k * s, Math.max(0.8, 0.85 * s), 0, 6.28);
+      ctx.fill();
+    }
+  }
 }
 function drawHud() {
   if (state !== 'run' || !player) {

@@ -49,6 +49,7 @@ function updateMosher(m, dt) {
     if (T && T.tick) T.tick(m, dt);   // per-frame boss state machines (charges, etc.)
     // NPC moves: windmill spin-out + kick anim timers
     m.abCd = Math.max(0, (m.abCd || 0) - dt);
+    m.rageT = Math.max(0, (m.rageT || 0) - dt);
     if (m.windT > 0) {
       m.windT -= dt;
       m.windTick = (m.windTick || 0) - dt;
@@ -286,6 +287,18 @@ function update(dt) {
     if (p.y < 0) p.y = 0;
   }
   particles = particles.filter(p => p.t < p.dur);
+  // boss projectiles (Cargo Shorts Kyle's pocket inventory)
+  for (const p of bossProjs) {
+    p.t += dt;
+    p.x += p.vx * dt; p.z += p.vz * dt; p.y += p.vy * dt;
+    p.vy -= 60 * dt;
+    if (player && !player.ko && hyp(p.x - player.x, p.z - player.z) < player.r + 9 && p.y < 60) {
+      const d = hyp(p.vx, p.vz) || 1;
+      hit(player, p.dmg, { x: p.vx / d, z: p.vz / d }, p.from);
+      p.t = 99;
+    }
+  }
+  bossProjs = bossProjs.filter(p => p.t < 1.3);
   // loose change on the floor: bounce, settle, get scooped (pickup change)
   for (const c of coins) {
     c.t += dt;

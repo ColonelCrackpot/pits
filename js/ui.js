@@ -1,6 +1,59 @@
 'use strict';
 // ============================== menu / shop / style UI ==============================
+// ---- settings: volume sliders (YPIM pattern: live preview, own storage key) ----
+{
+  const volMusic = $('volMusic'), volFx = $('volFx'), volUi = $('volUi');
+  volMusic.value = Math.round(AUDIO.music * 100);
+  volFx.value = Math.round(AUDIO.fx * 100);
+  volUi.value = Math.round(AUDIO.ui * 100);
+  let fxPrev = 0, uiPrev = 0;
+  volMusic.addEventListener('input', () => { AUDIO.music = volMusic.value / 100; audioPersist(); applyAudio(); });
+  volFx.addEventListener('input', () => {
+    AUDIO.fx = volFx.value / 100; audioPersist(); applyAudio();
+    clearTimeout(fxPrev); fxPrev = setTimeout(() => sfx.punch(), 120);
+  });
+  volUi.addEventListener('input', () => {
+    AUDIO.ui = volUi.value / 100; audioPersist(); applyAudio();
+    clearTimeout(uiPrev); uiPrev = setTimeout(() => sfx.buy(), 120);
+  });
+}
+// ---- danger zone: wipe the save (volumes + ad consent survive on purpose) ----
+$('resetBtn').addEventListener('click', () => {
+  if (!confirm('Wipe ALL progress — gold, upgrades, abilities, venues, scoreboard name — and start over?')) return;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  location.reload();
+});
+
+// venue switcher + next-venue unlock
+function renderVenue() {
+  const box = $('venueBox');
+  const v = save.venue, vm = save.venueMax;
+  const nextCost = VENUE_COST(vm);
+  box.innerHTML =
+    `<div class="strow">
+      <button class="sarrow" id="vPrev" ${v <= 1 ? 'disabled' : ''}>◀</button>
+      <div class="sval" style="text-align:center">${venueName(v)}<br>
+        <span style="font-size:10.5px;color:#c99aa0;font-weight:600">venue ${v} · crowd ×${venueMult('hp') >= 100 ? Math.round(venueMult('hp')) : +venueMult('hp').toFixed(1)} tough</span></div>
+      <button class="sarrow" id="vNext" ${v >= vm ? 'disabled' : ''}>▶</button>
+    </div>
+    <button class="buy" id="vBuy" style="width:100%;margin-bottom:4px" ${save.cred < nextCost ? 'disabled' : ''}>
+      🎟 UNLOCK ${venueName(vm + 1).toUpperCase()} — 🤘 ${nextCost}</button>`;
+  const sw = d => {
+    save.venue = clamp(save.venue + d, 1, save.venueMax);
+    persist(); resetCrowd(); refreshMenu();
+  };
+  $('vPrev').addEventListener('click', () => sw(-1));
+  $('vNext').addEventListener('click', () => sw(1));
+  $('vBuy').addEventListener('click', () => {
+    if (save.cred < nextCost) return;
+    save.cred -= nextCost;
+    save.venueMax++;
+    save.venue = save.venueMax;
+    persist(); sfx.best(); resetCrowd(); refreshMenu();
+  });
+}
 function refreshMenu() {
+  renderVenue();
   $('menuCred').textContent = save.cred;
   $('bestLine').textContent = save.bestTime > 0
     ? `Best: ${(save.bestScore || 0).toLocaleString()} score · ${fmtTime(save.bestTime)} survived · ${save.bestKos} KOs`

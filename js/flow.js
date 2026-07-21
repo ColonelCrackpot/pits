@@ -1,5 +1,11 @@
 'use strict';
 // ============================== game flow ==============================
+// wipe the pit so the crowd respawns with the current venue's stats & colors
+function resetCrowd() {
+  moshers = moshers.filter(m => m.isPlayer);
+  coins = []; bossProjs = []; ev = null; diver = null;
+  for (let i = 0; i < 12; i++) spawnNpc(false);   // fresh crowd, current venue's stats
+}
 function startRun() {
   audioInit();
   Music.setMode('run');
@@ -8,7 +14,7 @@ function startRun() {
   moshers.push(player);
   windUsed = 0;
   for (const id in abState) { abState[id].cd = 0; abState[id].t = 0; }
-  coins = [];
+  coins = []; bossProjs = [];
   ensureLoadout();
   updateAbBtns();
   runT = 0; runCred = 0; runScore = 0; runKos = 0; combo = 0; doubled = false;
@@ -34,7 +40,7 @@ function gameOver() {
   save.cred += runCred;
   persist();
   if (newBest) sfx.best();
-  Board.submit(save.bestTime);
+  Board.submit(save.bestScore, save.bestTime);
   updateAbBtns();
   $('overStats').innerHTML =
     `SCORE <span class="big">${score.toLocaleString()}</span>${newBestScore ? ' <span class="newbest">NEW BEST!</span>' : ''}<br>` +

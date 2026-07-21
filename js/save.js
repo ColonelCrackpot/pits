@@ -30,6 +30,11 @@ if (!save.pid) {
 }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
+if (!save.venue) save.venue = 1;         // venue currently being played
+if (!save.venueMax) save.venueMax = 1;   // highest venue unlocked
+const venueMult = k => Math.pow(VENUE_SCALE[k], save.venue - 1);
+const curTheme = () => VENUES[(save.venue - 1) % VENUES.length];
+
 const lvl = id => save.up[id] || 0;
 const upgCost = u => Math.round(u.base * Math.pow(1.65, lvl(u.id)));
 const abLvl = id => save.ab[id] || 0;

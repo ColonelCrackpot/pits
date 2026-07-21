@@ -59,7 +59,7 @@ const EVENTS = {
         for (const m of moshers) if (!m.isPlayer && !m.ko) m.mode = 'charge';
         boom(0.4, 0.6, 900);
       } else if (ev.phase === 'active' && ev.t > 3.6) {
-        endEvent(30, 'WALL SURVIVED');
+        endEvent(3, 'WALL SURVIVED');
       }
     },
     steer(m) {
@@ -104,14 +104,14 @@ const EVENTS = {
               ev.flowT = (ev.flowT || 0) + dt;
               if (ev.flowT > 1) {
                 ev.flowT -= 1;
-                runCred += Math.round(4 * pStats().credMult);
+                runCred += Math.max(1, Math.round(1 * pStats().credMult * venueMult('gold')));
                 runScore += 40;
                 floats.push({ x: player.x, z: player.z, y: 70, txt: '+40 flow', t: 0, color: '#ffd166' });
               }
             }
           }
         }
-        if (ev.t > 11.2) endEvent(20, 'CIRCLE CLOSED');
+        if (ev.t > 11.2) endEvent(2, 'CIRCLE CLOSED');
       }
     },
     steer(m) {
@@ -262,10 +262,11 @@ function updateEvent(dt) {
 }
 function endEvent(bonus, txt) {
   if (bonus && player && !player.ko && state === 'run') {
-    const g = Math.round(bonus * pStats().credMult);
+    const g = Math.max(1, Math.round(bonus * pStats().credMult * venueMult('gold')));
+    const sc = bonus * 100 * save.venue;
     runCred += g;
-    runScore += bonus * 10;
-    banner = { txt: txt, sub: `+${bonus * 10} score · +${g} gold`, t: 0, dur: 1.6, color: '#7bff9e' };
+    runScore += sc;
+    banner = { txt: txt, sub: `+${sc} score · +${g} gold`, t: 0, dur: 1.6, color: '#7bff9e' };
   }
   ev = null;
   evTimer = rnd(20, 30);

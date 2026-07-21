@@ -31,7 +31,9 @@
     <p class="hint" id="menuHint">The band's playing. The pit is open. <b>Move</b> with WASD, <b>swing</b> with SPACE or click.
     Knock out moshers for <b>CRED</b> — and watch for the <b>WALL&nbsp;OF&nbsp;DEATH</b>.</p>
     <div class="best" id="bestLine"></div>
-    <div class="credbar">🤘 <span id="menuCred">0</span> CRED</div>
+    <div class="credbar">🤘 <span id="menuCred">0</span> GOLD</div>
+    <div class="sect">VENUE</div>
+    <div id="venueBox"></div>
     <button class="btn alt" id="styleBtn">🎨 STYLE</button>
     <button class="btn alt" id="boardBtnM">🏆 SCOREBOARD</button>
     <div id="styleBox" style="display:none">
@@ -43,6 +45,11 @@
     <div class="sect">ABILITIES</div>
     <div id="abList"></div>
     <button class="btn" id="startBtn">ENTER THE PIT</button>
+    <div class="sect">SETTINGS</div>
+    <div class="audiorow"><label for="volMusic">🎵 Music</label><input id="volMusic" type="range" min="0" max="100" step="1"></div>
+    <div class="audiorow"><label for="volFx">💥 Effects</label><input id="volFx" type="range" min="0" max="100" step="1"></div>
+    <div class="audiorow"><label for="volUi">🔘 Menu</label><input id="volUi" type="range" min="0" max="100" step="1"></div>
+    <button class="buy danger" id="resetBtn" style="width:100%;margin-top:8px">⚠ reset save</button>
     <div class="flinks">
       <a href="guide.html">Game guide</a> · <a href="updates.html">Updates</a> · <a href="privacy.html">Privacy</a>
     </div>

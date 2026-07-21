@@ -1,18 +1,36 @@
 'use strict';
 // ============================== audio ==============================
-let ac = null, master = null, musicGain = null, sfxGain = null;
+let ac = null, master = null, musicGain = null, sfxGain = null, uiGain = null;
+// volume prefs live in their own key (like YPIM) so a save-wipe keeps them
+const AUDIO = { muted: false, music: 0.5, fx: 0.9, ui: 0.8 };
+try {
+  const stored = localStorage.getItem('pits_audio');
+  if (stored) Object.assign(AUDIO, JSON.parse(stored));
+  else if (typeof save.muted === 'boolean') AUDIO.muted = save.muted;   // migrate the old flag
+} catch (e) {}
+function audioPersist() { try { localStorage.setItem('pits_audio', JSON.stringify(AUDIO)); } catch (e) {} }
+let musicModeFactor = 0.5;   // menus duck the music; a run opens it up
+function applyAudio() {
+  if (!ac) return;
+  master.gain.value = AUDIO.muted ? 0 : 1;
+  musicGain.gain.value = AUDIO.music * musicModeFactor;
+  sfxGain.gain.value = AUDIO.fx;
+  uiGain.gain.value = AUDIO.ui;
+}
 function audioInit() {
   if (ac) return;
   try {
     ac = new (window.AudioContext || window.webkitAudioContext)();
-    master = ac.createGain(); master.gain.value = save.muted ? 0 : 1;
+    master = ac.createGain();
     master.connect(ac.destination);
-    musicGain = ac.createGain(); musicGain.gain.value = 0.4; musicGain.connect(master);
-    sfxGain = ac.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(master);
+    musicGain = ac.createGain(); musicGain.connect(master);
+    sfxGain = ac.createGain(); sfxGain.connect(master);
+    uiGain = ac.createGain(); uiGain.connect(master);
+    applyAudio();
     Music.start();
   } catch (e) {}
 }
-function beep(f0, f1, dur, type, vol) {
+function beep(f0, f1, dur, type, vol, bus) {
   if (!ac) return;
   try {
     const o = ac.createOscillator(), g = ac.createGain();
@@ -21,11 +39,11 @@ function beep(f0, f1, dur, type, vol) {
     o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), ac.currentTime + dur);
     g.gain.setValueAtTime(vol || 0.1, ac.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
-    o.connect(g); g.connect(sfxGain);
+    o.connect(g); g.connect(bus || sfxGain);
     o.start(); o.stop(ac.currentTime + dur + 0.02);
   } catch (e) {}
 }
-function boom(dur, vol, freq) {
+function boom(dur, vol, freq, bus) {
   if (!ac) return;
   try {
     const len = Math.floor(ac.sampleRate * dur);
@@ -35,7 +53,7 @@ function boom(dur, vol, freq) {
     const src = ac.createBufferSource(); src.buffer = buf;
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = freq || 700;
     const g = ac.createGain(); g.gain.value = vol || 0.4;
-    src.connect(lp); lp.connect(g); g.connect(sfxGain);
+    src.connect(lp); lp.connect(g); g.connect(bus || sfxGain);
     src.start();
   } catch (e) {}
 }
@@ -44,12 +62,12 @@ const sfx = {
   punch:  () => boom(0.09, 0.5, 500),
   ko:     () => { boom(0.3, 0.55, 350); beep(700, 120, 0.25, 'square', 0.1); },
   hurt:   () => beep(220, 90, 0.15, 'sawtooth', 0.16),
-  buy:    () => { beep(660, 660, 0.07, 'square', 0.1); setTimeout(() => beep(990, 990, 0.09, 'square', 0.1), 70); },
+  buy:    () => { beep(660, 660, 0.07, 'square', 0.1, uiGain); setTimeout(() => beep(990, 990, 0.09, 'square', 0.1, uiGain), 70); },
   coin:   () => beep(1050, 1650, 0.07, 'square', 0.06),
   horn:   () => { beep(110, 108, 0.5, 'sawtooth', 0.2); beep(165, 162, 0.5, 'sawtooth', 0.14); },
   tick:   () => beep(1200, 1200, 0.05, 'square', 0.07),
   wind:   () => { [330, 440, 660].forEach((f, i) => setTimeout(() => beep(f, f * 1.4, 0.14, 'square', 0.12), i * 90)); },
-  best:   () => { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => beep(f, f, 0.1, 'square', 0.09), i * 90)); },
+  best:   () => { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => beep(f, f, 0.1, 'square', 0.09, uiGain), i * 90)); },
 };
 
 // Music: custom tracks (see PITS_TRACKS in config.js) with a procedural-metal
@@ -208,7 +226,7 @@ const Music = (() => {
         while (nextT < ac.currentTime + 0.14) { schedule(step, nextT); nextT += SIX; step++; }
       }, 30);
     },
-    setMode(m) { mode = m; if (tracks.length) musicGain.gain.value = m === 'run' ? 0.5 : 0.25; },
+    setMode(m) { mode = m; musicModeFactor = m === 'run' ? 1 : 0.5; applyAudio(); },
     setTracks(list) {
       tracks = (list || []).map(norm);
       clearTimeout(gapTimer);
@@ -223,10 +241,10 @@ const Music = (() => {
 let beatAt = 0;   // performance.now() timestamp of the last downbeat (for lights/banging)
 const beatPulse = () => Math.max(0, 1 - (performance.now() - beatAt) / 300);
 
-$('muteBtn').textContent = save.muted ? '🔇' : '🔊';
+$('muteBtn').textContent = AUDIO.muted ? '🔇' : '🔊';
 $('muteBtn').addEventListener('click', e => {
   e.stopPropagation();
-  save.muted = !save.muted; persist();
-  $('muteBtn').textContent = save.muted ? '🔇' : '🔊';
-  if (master) master.gain.value = save.muted ? 0 : 1;
+  AUDIO.muted = !AUDIO.muted; audioPersist();
+  $('muteBtn').textContent = AUDIO.muted ? '🔇' : '🔊';
+  applyAudio();
 });

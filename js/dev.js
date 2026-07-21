@@ -23,8 +23,10 @@
       return b;
     };
     mk('▶ start run', () => PITS.start());
-    mk('💀 boss: Gene', () => spawnBoss('gene'));
-    mk('💪 boss: Shawn', () => spawnBoss('shawn'));
+    for (const bt of BOSS_ROTATION) {
+      mk('💀 ' + bt, () => spawnBoss(bt));
+    }
+    mk('🎟 venue +1', () => PITS.venue(save.venue + 1));
     mk('🧱 wall of death', () => PITS.event('wall'));
     mk('🌀 circle pit', () => PITS.event('circle'));
     mk('🤸 stage diver', () => PITS.event('diver'));

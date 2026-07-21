@@ -43,7 +43,7 @@ function think(m) {
   }
 }
 function npcSteer(m, dt) {
-  const sp = m.speed;
+  const sp = m.speed * (m.rageT > 0 ? 1.35 : 1);
   if (m.mode === 'seek' && m.target && !m.target.ko && !m.target.dead) {
     const dx = m.target.x - m.x, dz = m.target.z - m.z, d = hyp(dx, dz) || 1;
     const reach = (m.reach || 26) + m.target.r;
