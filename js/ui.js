@@ -18,8 +18,19 @@
   });
 }
 // ---- danger zone: wipe the save (volumes + ad consent survive on purpose) ----
+// Two-tap confirm built into the button — native confirm() dialogs can be
+// silently suppressed by the browser, which made the button look dead.
+let resetArmedAt = -99999;
 $('resetBtn').addEventListener('click', () => {
-  if (!confirm('Wipe ALL progress — gold, upgrades, abilities, venues, scoreboard name — and start over?')) return;
+  const now = performance.now();
+  if (now - resetArmedAt > 4000) {   // first tap: arm
+    resetArmedAt = now;
+    $('resetBtn').textContent = '⚠ wipe EVERYTHING? tap again';
+    setTimeout(() => {
+      if (performance.now() - resetArmedAt >= 3900) $('resetBtn').textContent = '⚠ reset save';
+    }, 4100);
+    return;
+  }
   try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
   location.reload();
 });
