@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://intothepits.pages.dev/sitemap.xml
+Sitemap: https://intothepits.com/sitemap.xml
