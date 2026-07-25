@@ -1,0 +1,20 @@
+# Cloudflare Pages header rules.
+#
+# The game is a set of plain <script> files that call into each other. Cloudflare
+# defaults static assets to max-age=14400, which lets a returning player run
+# FRESH html against FOUR-HOUR-OLD js — a mix of module versions that crashes the
+# render loop the moment a deploy moves a function between files. Always
+# revalidate code (a 304 is cheap); let the big immutable media cache hard.
+/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/style.css
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Band assets are content-addressed by folder — a new song or banner arrives
+# under a new name, so these can sit in cache for a week.
+/bands/*
+  Cache-Control: public, max-age=604800
