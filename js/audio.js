@@ -70,7 +70,7 @@ const sfx = {
   best:   () => { [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => beep(f, f, 0.1, 'square', 0.09, uiGain), i * 90)); },
 };
 
-// Music: custom tracks (see PITS_TRACKS in config.js) with a procedural-metal
+// Music: the current lineup's setlist (see LINEUPS in js/lineups.js) with a procedural-metal
 // fallback — chugging low E through a waveshaper, straight-8s kick, snare on
 // 2 & 4. Custom tracks route through musicGain (mute works) and drive the
 // headbang/light beat from their bpm (auto-detected + cached when omitted).
@@ -82,7 +82,7 @@ const Music = (() => {
     if (typeof t === 'string') t = { src: t };
     return { src: t.src, bpm: t.bpm || null, title: t.title || decodeURIComponent(t.src.split('/').pop().replace(/\.[a-z0-9]+$/i, '')) };
   };
-  let tracks = PITS_TRACKS.map(norm);
+  let tracks = (window.PITS_TRACKS || lineupTracks(curLineup())).map(norm);
   let audioEl = null, trackIdx = -1, curBpm = 150, lastBeatIdx = -1, gapTimer = null;
   let bpmCache = {};
   try { bpmCache = JSON.parse(localStorage.getItem('pits_bpm') || '{}'); } catch (e) {}

@@ -33,6 +33,8 @@ window.PITS = {
   kill: () => { if (player) { player.hp = 0; playerDown(); } },
   drunk: n => { drunk = clamp(n == null ? 100 : n, 0, 100); },
   item: t => { if (player) spawnItem(t || 'beer', player.x + 34, player.z); },
+  lineup: n => { save.lineup = (n || 0) % LINEUPS.length; persist(); BAND = null; Music.setTracks(lineupTracks(curLineup())); refreshMenu(); },
+  rollBand: () => { BAND = null; },   // fresh random faces on the next frame
   state: () => ({
     state, runT: Math.round(runT), runScore, runCred, runKos,
     hp: player ? Math.round(player.hp) : null,

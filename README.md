@@ -42,6 +42,13 @@ order (each file may use anything ABOVE it at load time, anything at call time):
   (js/abilities.js) with `use()` and optional `tick()`.
 - **New pit event** → entry in `EVENTS` (js/events.js) with `weight`, `start`,
   `update`, optional `steer`/`drawFloor`/`drawWorld`.
+- **New band / lineup** → drop their folder in `bands/<band>/` (banner PNG +
+  MP3s, nothing else touches those paths) and add an entry to `LINEUPS`
+  (js/lineups.js): name, `dir`, `banner`, `tracks`, and five members
+  (`lead`/`bass`/`drums`/`keys`/`vox` with stage `x`/`y`/`sc` and a fixed
+  `style`). **See bands/README.md — that's the onboarding doc for real bands.**
+  Art + audio live entirely with the band; the menu lineup row auto-enables its
+  arrows once a second entry exists.
 - **New pickup item** → entry in `ITEM_TYPES` (js/items.js) with `name`/`icon`/
   `uses`/`use()` and optional `prop`/`arm()`/`drawHeld()`/`breakFx()`/`linger`;
   drop one with `spawnItem(type, x, z)` (e.g. from a boss `onKo(m)` hook —
@@ -66,8 +73,9 @@ order (each file may use anything ABOVE it at load time, anything at call time):
 - Abilities: 🦵 Big Boot (E), 🌀 Windmill (Q), 😤 Berserk (R) — unlock + 3 levels.
 - Meta: CRED → 6 upgrades + abilities; character style picker (free); best
   time/KOs; between-song crowd lulls + NOW PLAYING toasts.
-- Music: MP3s in `music/` listed in `PITS_TRACKS` (config.js); BPM auto-detected
-  and cached (`pits_bpm`); ducks in menus; procedural chug-riff fallback.
+- Music: each band's MP3s live in their own `bands/<band>/` folder and are
+  listed in that band's `LINEUPS` entry; BPM auto-detected and cached
+  (`pits_bpm`); ducks in menus; procedural chug-riff fallback.
 - Leaderboard "PIT LEGENDS": Supabase `pits_scores` via locked
   `pits_submit_score` RPC (LIVE — created 2026-07-20; SQL below for reference).
   Score = best survival seconds. Anon key is public by design.

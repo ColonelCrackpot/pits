@@ -357,24 +357,27 @@ function smashFx(x, z, y) {
 }
 
 // ---- rendering: floor loot, the counter, the drunk HUD ----
-function drawItems() {
+// ONE piece of floor loot — called from render.js's depth-sorted pass so a
+// bottle lying behind someone is drawn behind them
+function drawFloorItem(it) {
   const t = performance.now() / 1000;
-  for (const it of items) {
-    const bob = Math.abs(Math.sin(t * 3 + it.x)) * 3;
-    const pr = proj(it.x, it.z, it.y + (it.y <= 0 ? bob : 0));
-    ctx.globalAlpha = it.t > 22 ? Math.max(0, (25 - it.t) / 3) : 1;
-    if (it.y <= 0.5) {   // loot shimmer so it reads as grabbable
-      ctx.strokeStyle = `rgba(123,255,158,${0.35 + 0.3 * Math.sin(t * 5 + it.z)})`;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(pr.x, proj(it.x, it.z, 0).y, 13 * pr.s, 5.5 * pr.s, 0, 0, 6.28);
-      ctx.stroke();
-    }
-    ctx.font = Math.round(15 * pr.s) + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(ITEM_TYPES[it.type].icon, pr.x, pr.y);
+  const bob = Math.abs(Math.sin(t * 3 + it.x)) * 3;
+  const pr = proj(it.x, it.z, it.y + (it.y <= 0 ? bob : 0));
+  ctx.globalAlpha = it.t > 22 ? Math.max(0, (25 - it.t) / 3) : 1;
+  if (it.y <= 0.5) {   // loot shimmer so it reads as grabbable
+    ctx.strokeStyle = `rgba(123,255,158,${0.35 + 0.3 * Math.sin(t * 5 + it.z)})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(pr.x, proj(it.x, it.z, 0).y, 13 * pr.s, 5.5 * pr.s, 0, 0, 6.28);
+    ctx.stroke();
   }
+  ctx.font = Math.round(15 * pr.s) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(ITEM_TYPES[it.type].icon, pr.x, pr.y);
   ctx.globalAlpha = 1;
+}
+// anything in the AIR belongs on top of the crowd: thrown glass, lightning
+function drawAirborne() {
   for (const p of thrown) {   // stuff you launched, mid-flight
     const pr = proj(p.x, p.z, p.y);
     ctx.save();

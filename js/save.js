@@ -32,6 +32,7 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 
 if (!save.venue) save.venue = 1;         // venue currently being played
 if (!save.venueMax) save.venueMax = 1;   // highest venue unlocked
+if (save.lineup == null) save.lineup = 0;   // which LINEUPS entry is on stage
 const venueMult = k => Math.pow(VENUE_SCALE[k], save.venue - 1);
 const curTheme = () => VENUES[(save.venue - 1) % VENUES.length];
 

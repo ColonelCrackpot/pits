@@ -40,12 +40,18 @@ function renderVenue() {
   const box = $('venueBox');
   const v = save.venue, vm = save.venueMax;
   const nextCost = VENUE_COST(vm);
+  const lu = curLineup(), multi = LINEUPS.length > 1;
   box.innerHTML =
     `<div class="strow">
       <button class="sarrow" id="vPrev" ${v <= 1 ? 'disabled' : ''}>◀</button>
       <div class="sval" style="text-align:center">${venueName(v)}<br>
         <span style="font-size:10.5px;color:#c99aa0;font-weight:600">venue ${v} · crowd ×${venueMult('hp') >= 100 ? Math.round(venueMult('hp')) : +venueMult('hp').toFixed(1)} tough</span></div>
       <button class="sarrow" id="vNext" ${v >= vm ? 'disabled' : ''}>▶</button>
+    </div>
+    <div class="strow">
+      <button class="sarrow" id="luPrev" ${multi ? '' : 'disabled'}>◀</button>
+      <div class="sval" style="text-align:center">🎤 ${lu.band}</div>
+      <button class="sarrow" id="luNext" ${multi ? '' : 'disabled'}>▶</button>
     </div>
     <button class="buy" id="vBuy" style="width:100%;margin-bottom:4px" ${save.cred < nextCost ? 'disabled' : ''}>
       🎟 UNLOCK ${venueName(vm + 1).toUpperCase()} — 🤘 ${nextCost}</button>`;
@@ -55,6 +61,14 @@ function renderVenue() {
   };
   $('vPrev').addEventListener('click', () => sw(-1));
   $('vNext').addEventListener('click', () => sw(1));
+  const swl = d => {   // swap the band: new faces on stage, new setlist in the deck
+    save.lineup = ((save.lineup || 0) + d + LINEUPS.length) % LINEUPS.length;
+    persist(); BAND = null;
+    Music.setTracks(lineupTracks(curLineup()));
+    refreshMenu();
+  };
+  $('luPrev').addEventListener('click', () => swl(-1));
+  $('luNext').addEventListener('click', () => swl(1));
   $('vBuy').addEventListener('click', () => {
     if (save.cred < nextCost) return;
     save.cred -= nextCost;

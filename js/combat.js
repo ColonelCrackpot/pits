@@ -79,8 +79,9 @@ function koMosher(m, att, dir) {
     if (m.boss) {
       if (m.type !== 'luke' && r < 0.35) spawnItem(pick(['bass', 'acoustic', 'eguitar']), m.x, m.z);
     } else if (!m.minion) {
-      if (r < 0.07) spawnItem('beer', m.x, m.z);          // 1-in-4 of these still has beer in it
-      else if (r < 0.14) spawnItem('glass', m.x, m.z);
+      // rare enough to be an event — a KO-heavy set sees a couple, not a bar's worth
+      if (r < 0.01) spawnItem('beer', m.x, m.z);          // 1-in-4 of these still has beer in it
+      else if (r < 0.02) spawnItem('glass', m.x, m.z);
     }
   }
 }

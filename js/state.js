@@ -16,7 +16,13 @@ const isTouch = matchMedia('(pointer: coarse)').matches;
 if (isTouch) document.body.classList.add('touch');
 
 const intensity = () => state === 'run' ? Math.min(1, runT / 150) : 0.25;
-const maxNpc = () => calm > 0 ? Math.ceil((12 + 14 * intensity()) * 0.35) : 12 + Math.floor(14 * intensity());
+// the pit KEEPS filling long after stats plateau: 12 at the door, ~26 by 2:30,
+// then a steady stream of walk-ins toward a ~96-body cap around the 8-minute mark
+const maxNpc = () => {
+  if (calm > 0) return Math.ceil((12 + 14 * intensity()) * 0.35);
+  const late = state === 'run' ? Math.min(70, Math.max(0, (runT - 150) * 0.2)) : 0;
+  return 12 + Math.floor(14 * intensity() + late);
+};
 const liveNpc = () => moshers.reduce((n, m) => n + (!m.isPlayer && !m.dead && !m.ko && !m.boss && !m.minion ? 1 : 0), 0);
 let nextBossT = 90;           // run time of the next boss entrance
 const BOSS_ROTATION = ['jarrad', 'shane', 'luke', 'kylegym', 'gothtwins', 'adrian', 'reno', 'andre', 'barry'];

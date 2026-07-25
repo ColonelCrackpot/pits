@@ -23,11 +23,13 @@ function think(m) {
   // pick someone to hit — the pit hits the pit, and mostly NOT the player
   let huntersOnPlayer = 0;
   for (const o of moshers) if (!o.isPlayer && o.mode === 'seek' && o.target && o.target.isPlayer) huntersOnPlayer++;
+  // a packed pit has less respect for personal space: 2 hunters early, up to 5 late
+  const maxHunt = 2 + Math.floor(liveNpc() / 25);
   let best = null, bd = 260;
   for (const o of moshers) {
     if (o === m || o.ko || o.dead) continue;
     if (o.isPlayer && mellowT > 0) continue;   // acoustic truce: nobody picks YOU
-    if (o.isPlayer && huntersOnPlayer >= 2 && m.target !== o) continue;
+    if (o.isPlayer && huntersOnPlayer >= maxHunt && m.target !== o) continue;
     const d = hyp(o.x - m.x, o.z - m.z) * (o.isPlayer ? 1.15 : 1);
     if (d < bd) { bd = d; best = o; }
   }

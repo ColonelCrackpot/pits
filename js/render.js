@@ -16,23 +16,25 @@ function render() {
   drawSideCrowds(beat);
   if (songToast) drawSongToast(beat);
 
-  const drawList = moshers.slice().sort((a, b) => b.z - a.z);
-  for (const m of drawList) drawMosher(m);
+  // ONE depth-sorted pass over everything standing on the floor: bodies, loose
+  // change and dropped loot all occlude each other by depth, so a coin behind
+  // someone stays behind them
+  const drawList = [];
+  for (const m of moshers) drawList.push({ z: m.z, k: 0, o: m });
+  for (const c of coins) drawList.push({ z: c.z, k: 1, o: c });
+  for (const it of items) drawList.push({ z: it.z, k: 2, o: it });
+  drawList.sort((a, b) => b.z - a.z);
+  for (const e of drawList) {
+    if (e.k === 0) drawMosher(e.o);
+    else if (e.k === 1) drawCoin(e.o);
+    else drawFloorItem(e.o);
+  }
+  ctx.globalAlpha = 1;
   drawEventWorld();
   // …and the front row with their backs to the camera, in front of everything
   drawFrontCrowd(beat);
   drawBar(beat);   // the PIT STOP counter claims the front-left corner
-
-  for (const c of coins) {   // loose change glinting on the floor
-    const pr = proj(c.x, c.z, c.y);
-    ctx.globalAlpha = c.t > 9 ? Math.max(0, (12 - c.t) / 3) : 1;
-    ctx.fillStyle = '#b8860b';
-    ctx.beginPath(); ctx.ellipse(pr.x, pr.y + 1.2 * pr.s, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle = Math.sin(performance.now() / 160 + c.x * 3) > 0.3 ? '#ffe27a' : '#ffd166';
-    ctx.beginPath(); ctx.ellipse(pr.x, pr.y, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  drawItems();   // loot waiting on the floor
+  drawAirborne();  // thrown bottles & lightning arc over the top of it all
   for (const p of bossProjs) {   // incoming pocket debris
     const pr = proj(p.x, p.z, p.y);
     ctx.save();
@@ -91,6 +93,76 @@ function render() {
   }
   drawHud();
 }
+function drawCoin(c) {   // loose change glinting on the floor
+  const pr = proj(c.x, c.z, c.y);
+  ctx.globalAlpha = c.t > 9 ? Math.max(0, (12 - c.t) / 3) : 1;
+  ctx.fillStyle = '#b8860b';
+  ctx.beginPath(); ctx.ellipse(pr.x, pr.y + 1.2 * pr.s, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = Math.sin(performance.now() / 160 + c.x * 3) > 0.3 ? '#ffe27a' : '#ffd166';
+  ctx.beginPath(); ctx.ellipse(pr.x, pr.y, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+// band backdrop: an uploadable PNG per lineup (bands/*.png). Until one loads —
+// or if a band never supplies one — their name goes up on a cloth banner.
+const bannerCache = {};
+function bannerImg(src) {
+  if (!src) return null;
+  let e = bannerCache[src];
+  if (!e) {
+    e = bannerCache[src] = { img: new Image(), ok: false };
+    e.img.onload = () => { e.ok = e.img.naturalWidth > 0; };
+    e.img.onerror = () => { e.failed = true; };
+    e.img.src = src;
+  }
+  return e.ok ? e.img : null;
+}
+// the banner hangs high on the wall; the NOW PLAYING toast sits under it
+function bandBannerRect(stTop) {
+  // as much of the back wall as we can spare — artwork is fitted inside with
+  // its aspect kept, so a squarer logo still lands at a readable size
+  const bw = Math.min(W * 0.5, 460);
+  const bh = Math.min(stTop * 0.55, bw * 0.55);
+  return { x: W / 2 - bw / 2, y: 30, w: bw, h: bh };   // y clears the HUD timer
+}
+function drawBandBanner(stTop) {
+  const lu = curLineup();
+  const rc = bandBannerRect(stTop);
+  const bw = rc.w, bh = rc.h, bx = rc.x, by = rc.y;
+  const img = bannerImg(lineupBanner(lu));
+  if (img) {   // their artwork, letterboxed into the banner slot
+    const r = Math.min(bw / img.naturalWidth, bh / img.naturalHeight);
+    const iw = img.naturalWidth * r, ih = img.naturalHeight * r;
+    ctx.drawImage(img, W / 2 - iw / 2, by + (bh - ih) / 2, iw, ih);
+    return;
+  }
+  // fallback: printed cloth, sagging off two tie points
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,7,12,.92)';
+  ctx.beginPath();
+  ctx.moveTo(bx, by);
+  ctx.lineTo(bx + bw, by);
+  ctx.lineTo(bx + bw, by + bh);
+  ctx.quadraticCurveTo(W / 2, by + bh + 7, bx, by + bh);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = '#7a2230';   // tie points
+  for (const px of [bx + 6, bx + bw - 6]) {
+    ctx.beginPath(); ctx.arc(px, by + 4, 2.5, 0, 6.28); ctx.fill();
+  }
+  const name = lu.band;
+  let fs = Math.min(bh * 0.5, bw / (name.length * 0.62));
+  ctx.font = '900 ' + Math.round(fs) + 'px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8dce0';
+  ctx.strokeStyle = 'rgba(0,0,0,.65)';
+  ctx.lineWidth = Math.max(2, fs * 0.14);
+  ctx.strokeText(name, W / 2, by + bh * 0.62);
+  ctx.fillText(name, W / 2, by + bh * 0.62);
+  ctx.restore();
+}
 function drawStage(beat) {
   const stY = syAt(D);              // stage front edge on screen
   const stTop = stY - H * 0.16;     // platform top
@@ -122,6 +194,7 @@ function drawStage(beat) {
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+  drawBandBanner(stTop);   // the band's name/logo hanging on the back wall
   // platform
   ctx.fillStyle = T.plat[0];
   ctx.fillRect(0, stTop, W, stY - stTop);
@@ -141,56 +214,255 @@ function drawStage(beat) {
       ctx.stroke();
     }
   }
-  // band
-  drawBander(W * 0.5, stTop + 6, 1.15, beat, 'vox');
-  drawBander(W * 0.32, stTop - 2, 1.0, beat, 'gtr');
-  drawBander(W * 0.68, stTop - 2, 1.0, beat, 'gtr2');
-  drawBander(W * 0.5, stTop - 26, 0.85, beat, 'drums');
+  // tonight's lineup takes the stage — who, where and how big all come from
+  // the lineup entry (js/lineups.js). y is depth on the platform, so feet
+  // always land ON the boards; upstage members draw first.
+  if (!BAND) BAND = buildBand();
+  const deck = stY - stTop;
+  // the deck line: one edge running the full width BELOW the whole band, so
+  // the stage reads as a flat floor instead of everyone standing on a hill
+  const frontY = Math.min(stTop + (Math.max(...BAND.map(b => b.y)) + 0.16) * deck, stY - 8);
+  ctx.strokeStyle = T.plat[2];
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, frontY + 1.5); ctx.lineTo(W, frontY + 1.5); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.05)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, frontY - 0.5); ctx.lineTo(W, frontY - 0.5); ctx.stroke();
+  for (const bm of BAND.slice().sort((a, b) => a.y - b.y)) {
+    drawBandMember(W * bm.x, stTop + bm.y * deck, bm.sc, beat, bm);
+  }
   // strobe on the downbeat
   if (beat > 0.82) { ctx.fillStyle = `rgba(255,245,255,${(beat - 0.82) * 1.4})`; ctx.fillRect(0, 0, W, stY); }
 }
-function drawBander(x, footY, sc, beat, role) {
-  const s = (H / 800) * 34 * sc;
-  const bang = Math.sin(performance.now() / 1000 * 8.2) * (0.5 + beat);
+// a band member, modeled like the pit bodies: pants legs, shirt torso, skin
+// arms & head, real hair — facing the crowd, playing an actual instrument.
+// (WHO is on stage comes from BAND / buildBand() in js/lineups.js.)
+function drawBandMember(x, footY, sc, beat, mem) {
+  const s = (H / 800) * 36 * sc;
+  const t = performance.now() / 1000;
+  const bang = Math.sin(t * 8.2 + mem.phase) * (0.45 + beat * 0.55);
+  const R = mem.role;
   ctx.save();
   ctx.translate(x, footY);
-  ctx.strokeStyle = '#050308'; ctx.fillStyle = '#050308';
-  ctx.lineWidth = Math.max(2.5, s * 0.16); ctx.lineCap = 'round';
-  if (role === 'drums') {
-    ctx.beginPath(); ctx.arc(0, -s * 0.95, s * 0.22, 0, 6.28); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.5, -s * 0.55 - bang * 4); ctx.lineTo(0, -s * 0.75); ctx.lineTo(s * 0.5, -s * 0.55 + bang * 4);
-    ctx.stroke();
-    ctx.fillStyle = '#241017';
-    ctx.fillRect(-s * 0.75, -s * 0.5, s * 1.5, s * 0.5);
-    ctx.restore();
-    return;
+  ctx.lineCap = 'round';
+  // stage shadow
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.beginPath(); ctx.ellipse(0, s * 0.03, s * 0.42, s * 0.09, 0, 0, 6.28); ctx.fill();
+
+  const seated = R === 'drums';
+  const hipY = seated ? -s * 0.38 : -s * 0.5;
+  const neckY = hipY - s * 0.42;
+  const lean = (R === 'vox' ? 0.4 : 0.2) * bang;      // headbang lean
+  const nx = Math.sin(lean) * s * 0.18;
+  const headY = neckY - s * 0.16 - Math.abs(Math.cos(lean)) * s * 0.02;
+  const hx = nx * 1.6;
+
+  // long hair hangs BEHIND the body — drawn first, so the torso and the
+  // instrument sit in front of it exactly like they do in the pit
+  if (mem.hairstyle === 'long') {
+    ctx.strokeStyle = mem.hair;
+    ctx.lineWidth = Math.max(2, s * 0.09);
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(hx + sgn * s * 0.1, headY - s * 0.04);
+      ctx.quadraticCurveTo(
+        hx + sgn * s * 0.2 - bang * s * 0.28, headY + s * 0.24,
+        hx + sgn * s * 0.16 - bang * s * 0.42, headY + s * 0.5);
+      ctx.stroke();
+    }
   }
   // legs
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.22, 0); ctx.lineTo(0, -s * 0.5); ctx.lineTo(s * 0.22, 0);
-  ctx.stroke();
-  // torso with headbang lean
-  const lean = role === 'vox' ? bang * 0.35 : bang * 0.22;
-  const hx = Math.sin(lean) * s * 0.6, hy = -s * 0.5 - Math.cos(lean) * s * 0.62;
-  ctx.beginPath(); ctx.moveTo(0, -s * 0.5); ctx.lineTo(hx, hy); ctx.stroke();
-  // head + whipping hair
-  ctx.beginPath(); ctx.arc(hx, hy - s * 0.14, s * 0.16, 0, 6.28); ctx.fill();
-  ctx.lineWidth = Math.max(2, s * 0.1);
-  ctx.beginPath();
-  ctx.moveTo(hx, hy - s * 0.2);
-  ctx.quadraticCurveTo(hx - bang * s * 0.5, hy + s * 0.1, hx - bang * s * 0.62, hy + s * 0.42);
-  ctx.stroke();
-  ctx.lineWidth = Math.max(2.5, s * 0.16);
-  if (role === 'vox') {
-    ctx.beginPath(); ctx.moveTo(hx, hy + s * 0.1); ctx.lineTo(hx + s * 0.34, hy - s * 0.05); ctx.stroke();
+  ctx.strokeStyle = mem.pants;
+  ctx.lineWidth = Math.max(2.5, s * 0.13);
+  if (seated) {   // drummer: knees toward the kit, stool implied
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, hipY); ctx.lineTo(sgn * s * 0.22, hipY + s * 0.2); ctx.lineTo(sgn * s * 0.26, 0);
+      ctx.stroke();
+    }
   } else {
-    const dir2 = role === 'gtr' ? 1 : -1;
+    const step = R === 'vox' ? s * 0.26 : s * 0.2;    // singer: wide stance
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(0, hipY); ctx.quadraticCurveTo(sgn * step * 0.7, hipY / 2, sgn * step, 0);
+      ctx.stroke();
+    }
+  }
+  // torso
+  ctx.strokeStyle = mem.shirt;
+  ctx.lineWidth = Math.max(3.5, s * 0.2);
+  ctx.beginPath(); ctx.moveTo(0, hipY); ctx.lineTo(nx, neckY); ctx.stroke();
+
+  // arms + instrument, per role (skin arms, lineWidth thinner)
+  const armW = Math.max(2, s * 0.1);
+  ctx.strokeStyle = mem.skin;
+  ctx.lineWidth = armW;
+  const shY = neckY + s * 0.06;
+  if (R === 'lead' || R === 'bass') {
+    // guitar body at the hip, neck up-and-away; far hand frets, near hand strums
+    const dir = R === 'lead' ? -1 : 1;                 // lead points left, bass right
+    const gx = 0, gy = hipY - s * 0.06;
+    const nkx = dir * s * 0.62, nky = gy - s * 0.34;
+    // neck-side arm frets — drawn BEHIND the guitar, hand up on the neck
+    ctx.beginPath(); ctx.moveTo(dir * s * 0.16, shY); ctx.lineTo(nkx * 0.8, nky * 0.98); ctx.stroke();
+    const strum = Math.sin(t * 8.2 * 2 + mem.phase) * s * 0.05;
+    // the instrument
     ctx.save();
-    ctx.translate(0, -s * 0.62); ctx.rotate(dir2 * (0.5 + bang * 0.08));
-    ctx.fillStyle = '#3a1218';
-    ctx.fillRect(-s * 0.55, -s * 0.09, s * 1.1, s * 0.18);
+    ctx.translate(gx, gy);
+    ctx.rotate(dir * -0.45);
+    ctx.strokeStyle = '#1c1410';
+    ctx.lineWidth = Math.max(2, s * 0.07);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(dir * s * 0.72, -s * 0.1); ctx.stroke();   // neck
+    ctx.fillStyle = '#0d0b0e';
+    ctx.fillRect(dir * s * 0.72 - s * 0.05, -s * 0.16, s * 0.1, s * 0.12);                    // headstock
+    if (R === 'lead') {   // the white V
+      ctx.fillStyle = '#efe8dc';
+      ctx.strokeStyle = '#141216';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dir * s * 0.06, -s * 0.08);
+      ctx.lineTo(-dir * s * 0.3, s * 0.18);
+      ctx.lineTo(-dir * s * 0.12, 0);
+      ctx.lineTo(-dir * s * 0.28, -s * 0.2);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {              // sunburst bass
+      ctx.fillStyle = '#3a2010';
+      ctx.beginPath(); ctx.ellipse(-dir * s * 0.14, 0.02 * s, s * 0.2, s * 0.15, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#c87a2e';
+      ctx.beginPath(); ctx.ellipse(-dir * s * 0.14, 0.02 * s, s * 0.12, s * 0.08, 0, 0, 6.28); ctx.fill();
+    }
     ctx.restore();
+    // …and the strumming arm lands ON TOP of the guitar, where a real one is
+    ctx.strokeStyle = mem.skin;
+    ctx.lineWidth = armW;
+    ctx.beginPath(); ctx.moveTo(-dir * s * 0.16, shY); ctx.lineTo(gx + dir * s * 0.1, gy + s * 0.12 + strum); ctx.stroke();
+    ctx.fillStyle = mem.skin;   // strumming hand
+    ctx.beginPath(); ctx.arc(gx + dir * s * 0.1, gy + s * 0.12 + strum, s * 0.05, 0, 6.28); ctx.fill();
+  } else if (R === 'drums') {
+    // alternating sticks over the kit
+    for (const [sgn, ph] of [[-1, 0], [1, Math.PI]]) {
+      const hit2 = Math.max(0, Math.sin(t * 8.2 + ph));
+      const hxx = sgn * s * 0.34, hyy = hipY - s * 0.12 + hit2 * s * 0.1;
+      ctx.beginPath(); ctx.moveTo(sgn * s * 0.14, shY); ctx.lineTo(hxx, hyy); ctx.stroke();
+      ctx.strokeStyle = '#c8b89a';   // stick
+      ctx.lineWidth = Math.max(1, s * 0.04);
+      ctx.beginPath(); ctx.moveTo(hxx, hyy); ctx.lineTo(hxx + sgn * s * 0.16, hyy + s * 0.1 - hit2 * s * 0.06); ctx.stroke();
+      ctx.strokeStyle = mem.skin;
+      ctx.lineWidth = armW;
+    }
+  } else if (R === 'keys') {
+    // both hands down on the board, pecking alternately
+    for (const [sgn, ph] of [[-1, 0], [1, Math.PI * 0.7]]) {
+      const peck = Math.abs(Math.sin(t * 8.2 + ph)) * s * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(sgn * s * 0.14, shY);
+      ctx.lineTo(sgn * s * 0.26, hipY - s * 0.16 + peck);
+      ctx.stroke();
+    }
+  } else {   // vox
+    // mic hand up to the face, other arm throwing horns skyward
+    const mx = hx + s * 0.2, my = headY + s * 0.06;
+    ctx.beginPath(); ctx.moveTo(s * 0.14, shY); ctx.lineTo(mx, my); ctx.stroke();
+    const up = -bang * s * 0.08;
+    ctx.beginPath(); ctx.moveTo(-s * 0.14, shY); ctx.lineTo(-s * 0.4, neckY - s * 0.3 + up); ctx.stroke();
+    ctx.fillStyle = mem.skin;   // the horns fist
+    ctx.beginPath(); ctx.arc(-s * 0.4, neckY - s * 0.3 + up, s * 0.05, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = mem.skin;
+    ctx.lineWidth = Math.max(1, s * 0.035);
+    for (const fdx of [-0.05, 0.02]) {   // index + pinky
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.4 + fdx * s, neckY - s * 0.3 + up - s * 0.03);
+      ctx.lineTo(-s * 0.42 + fdx * s * 1.6, neckY - s * 0.3 + up - s * 0.12);
+      ctx.stroke();
+    }
+    // mic + short cable
+    ctx.fillStyle = '#20242c';
+    ctx.beginPath(); ctx.arc(mx + s * 0.02, my - s * 0.02, s * 0.055, 0, 6.28); ctx.fill();
+  }
+
+  // head
+  ctx.fillStyle = mem.skin;
+  ctx.beginPath(); ctx.arc(hx, headY, s * 0.15, 0, 6.28); ctx.fill();
+  // hair on top
+  ctx.fillStyle = mem.hair;
+  if (mem.hairstyle === 'mohawk') {
+    ctx.beginPath();
+    ctx.moveTo(hx - s * 0.12, headY - s * 0.06);
+    ctx.lineTo(hx, headY - s * 0.34);
+    ctx.lineTo(hx + s * 0.12, headY - s * 0.06);
+    ctx.closePath(); ctx.fill();
+  } else if (mem.hairstyle === 'spikes') {
+    for (let k = 0; k < 4; k++) {
+      const ang = -Math.PI * (0.2 + 0.6 * k / 3);
+      ctx.beginPath();
+      ctx.moveTo(hx + Math.cos(ang - 0.35) * s * 0.13, headY + Math.sin(ang - 0.35) * s * 0.13);
+      ctx.lineTo(hx + Math.cos(ang) * s * 0.32, headY + Math.sin(ang) * s * 0.32);
+      ctx.lineTo(hx + Math.cos(ang + 0.35) * s * 0.13, headY + Math.sin(ang + 0.35) * s * 0.13);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (mem.hairstyle !== 'bald') {   // short cap (also the roots for long)
+    ctx.beginPath(); ctx.arc(hx, headY - s * 0.04, s * 0.14, Math.PI, 0); ctx.fill();
+  }
+
+  // gear drawn in front of its operator
+  if (R === 'drums') {
+    ctx.fillStyle = '#241017';   // kick drum
+    ctx.beginPath(); ctx.arc(0, -s * 0.22, s * 0.26, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = '#4a2a34';
+    ctx.lineWidth = Math.max(1.5, s * 0.04);
+    ctx.stroke();
+    ctx.fillStyle = '#d8ccb0';
+    ctx.beginPath(); ctx.arc(0, -s * 0.22, s * 0.17, 0, 6.28); ctx.fill();
+    // rack toms riding on the kick
+    for (const sgn of [-1, 1]) {
+      ctx.fillStyle = '#3a1a24';
+      ctx.beginPath(); ctx.ellipse(sgn * s * 0.14, -s * 0.5, s * 0.12, s * 0.1, sgn * 0.15, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#d8ccb0';
+      ctx.beginPath(); ctx.ellipse(sgn * s * 0.14, -s * 0.53, s * 0.1, s * 0.05, sgn * 0.15, 0, 6.28); ctx.fill();
+    }
+    // snare on its stand, hit-side
+    ctx.strokeStyle = '#5a5040';
+    ctx.lineWidth = Math.max(1, s * 0.03);
+    ctx.beginPath(); ctx.moveTo(-s * 0.38, 0); ctx.lineTo(-s * 0.38, -s * 0.32); ctx.stroke();
+    ctx.fillStyle = '#8a2a34';
+    ctx.fillRect(-s * 0.5, -s * 0.4, s * 0.24, s * 0.08);
+    ctx.fillStyle = '#d8ccb0';
+    ctx.beginPath(); ctx.ellipse(-s * 0.38, -s * 0.4, s * 0.12, s * 0.035, 0, 0, 6.28); ctx.fill();
+    for (const sgn of [-1, 1]) {   // cymbals on stands
+      const shim = Math.sin(t * 8.2 * 2 + sgn) * s * 0.02;
+      ctx.strokeStyle = '#5a5040';
+      ctx.lineWidth = Math.max(1, s * 0.03);
+      ctx.beginPath(); ctx.moveTo(sgn * s * 0.55, 0); ctx.lineTo(sgn * s * 0.55, -s * 0.62); ctx.stroke();
+      ctx.fillStyle = '#c8a83a';
+      ctx.beginPath(); ctx.ellipse(sgn * s * 0.55, -s * 0.62 + shim, s * 0.16, s * 0.035, 0, 0, 6.28); ctx.fill();
+    }
+  } else if (R === 'keys') {
+    ctx.fillStyle = '#14161c';   // the board on its stand
+    ctx.save();
+    ctx.transform(1, -0.06, 0, 1, 0, 0);
+    ctx.fillRect(-s * 0.44, hipY - s * 0.14, s * 0.88, s * 0.12);
+    ctx.fillStyle = '#e8e4da';
+    ctx.fillRect(-s * 0.4, hipY - s * 0.11, s * 0.8, s * 0.05);
+    ctx.strokeStyle = '#14161c';
+    ctx.lineWidth = 1;
+    for (let k = 1; k < 10; k++) {
+      const kx = -s * 0.4 + s * 0.8 * (k / 10);
+      ctx.beginPath(); ctx.moveTo(kx, hipY - s * 0.11); ctx.lineTo(kx, hipY - s * 0.06); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#2a2e38';   // stand legs
+    ctx.lineWidth = Math.max(1.5, s * 0.04);
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(sgn * s * 0.3, hipY - s * 0.02); ctx.lineTo(sgn * s * 0.38, 0); ctx.stroke();
+    }
+  } else if (R === 'vox') {
+    // mic cable trailing to the floor
+    ctx.strokeStyle = '#20242c';
+    ctx.lineWidth = Math.max(1, s * 0.03);
+    ctx.beginPath();
+    ctx.moveTo(hx + s * 0.22, headY + s * 0.06);
+    ctx.quadraticCurveTo(hx + s * 0.3, -s * 0.2, s * 0.1, 0);
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -244,7 +516,9 @@ function drawFollowSpot(m, radius, rgb, alpha) {
 function drawSongToast(beat) {
   const t = songToast.t;
   const a = t < 0.4 ? t / 0.4 : t > 4 ? Math.max(0, 5 - t) : 1;
-  const y = syAt(D) * 0.42;
+  const stTop = syAt(D) - H * 0.16;
+  const rc = bandBannerRect(stTop);
+  const y = Math.min(rc.y + rc.h + 46, stTop - 10);   // tucked under the backdrop
   ctx.save();
   ctx.globalAlpha = clamp(a, 0, 1);
   ctx.translate(W / 2, y);
@@ -261,7 +535,7 @@ function drawSongToast(beat) {
   ctx.strokeText(txt, 0, 0);
   ctx.fillStyle = '#ff9d6b';
   ctx.fillText(txt, 0, 0);
-  ctx.restore();
+  ctx.restore();   // no band credit here — their banner is hanging right above
 }
 function drawBarrierCrowd(beat) {
   const z = D * 0.985;

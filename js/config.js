@@ -113,14 +113,8 @@ const ADS_CFG = {
   web: { adsenseClient: 'ca-pub-6716374157787378', sideBannerSlot: '', h5: true, live: false },
 };
 
-// Custom tracks (drop MP3s in music/ and list them here). bpm optional — the
-// game detects it from the audio and caches it. Falls back to the procedural riff.
-const PITS_TRACKS = window.PITS_TRACKS || [
-  { src: 'music/Iron Maw.mp3', title: 'Iron Maw' },
-  { src: 'music/Bone Hurting Juice.mp3', title: 'Bone Hurting Juice' },
-  { src: 'music/Ashes of Iron.mp3', title: 'Ashes of Iron' },
-  { src: 'music/Pit Sermon.mp3', title: 'Pit Sermon' },
-];
+// Music now lives with the band: see LINEUPS in js/lineups.js.
+// (window.PITS_TRACKS still overrides the setlist for testing.)
 
 const SKINS = ['#e8b48c', '#c98d63', '#8d5b3c', '#5f3d28', '#f0c9a8'];
 const SHIRTS = ['#2a2230', '#241c26', '#33202a', '#1e2630', '#3a1424', '#2c2c34', '#402a18'];
