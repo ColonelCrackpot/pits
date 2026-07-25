@@ -187,7 +187,7 @@ const ABILITY_IMPL = {
 function useAbility(id) {
   const a = ABILITIES.find(x => x.id === id);
   const l = abLvl(id);
-  if (!a || !l || !player || player.ko || player.stun > 0 || state !== 'run') return;
+  if (!a || !l || !player || player.ko || player.stun > 0 || state !== 'run' || paused) return;
   const st = abState[id];
   if (st.cd > 0 || abChanneling()) return;
   st.cd = a.cd(l);

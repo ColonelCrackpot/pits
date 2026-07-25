@@ -1,6 +1,7 @@
 'use strict';
 // ============================== shared mutable state ==============================
 let state = 'menu';           // 'menu' | 'run' | 'over'
+let paused = false;           // mid-run pause: sim frozen, panel open
 let moshers = [], particles = [], floats = [], coins = [];
 let player = null, god = false;
 let runT = 0, runCred = 0, runScore = 0, runKos = 0, combo = 0, comboT = 0, doubled = false;

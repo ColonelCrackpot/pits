@@ -9,7 +9,7 @@ function frame(now) {
   lastT = now;
   if (dt > 0.05) dt = 0.05;
   if (W !== innerWidth || H !== innerHeight) relayout();   // embeds can start 0-sized without firing resize
-  update(dt);
+  if (!paused) update(dt);   // paused: the pit holds still, the lights keep moving
   render();
   if (isTouch) { updateAbBtns(); updateItemBtn(); }
 }
@@ -31,6 +31,7 @@ window.PITS = {
   nowPlaying: () => Music.now(),
   cred: n => { save.cred += (n || 500); persist(); refreshMenu(); },
   kill: () => { if (player) { player.hp = 0; playerDown(); } },
+  pause: v => setPaused(v !== false),
   drunk: n => { drunk = clamp(n == null ? 100 : n, 0, 100); },
   item: t => { if (player) spawnItem(t || 'beer', player.x + 34, player.z); },
   lineup: n => { save.lineup = (n || 0) % LINEUPS.length; persist(); BAND = null; Music.setTracks(lineupTracks(curLineup())); refreshMenu(); },

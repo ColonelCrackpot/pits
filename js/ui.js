@@ -1,22 +1,57 @@
 'use strict';
 // ============================== menu / shop / style UI ==============================
 // ---- settings: volume sliders (YPIM pattern: live preview, own storage key) ----
-{
-  const volMusic = $('volMusic'), volFx = $('volFx'), volUi = $('volUi');
-  volMusic.value = Math.round(AUDIO.music * 100);
-  volFx.value = Math.round(AUDIO.fx * 100);
-  volUi.value = Math.round(AUDIO.ui * 100);
+// Wired for BOTH the menu and the pause panel — syncVolume() pushes the current
+// levels into every set so the two never disagree.
+const VOL_SETS = [['volMusic', 'volFx', 'volUi'], ['pVolMusic', 'pVolFx', 'pVolUi']];
+function wireVolume(musicId, fxId, uiId) {
+  const m = $(musicId), f = $(fxId), u = $(uiId);
+  if (!m) return;
   let fxPrev = 0, uiPrev = 0;
-  volMusic.addEventListener('input', () => { AUDIO.music = volMusic.value / 100; audioPersist(); applyAudio(); });
-  volFx.addEventListener('input', () => {
-    AUDIO.fx = volFx.value / 100; audioPersist(); applyAudio();
+  m.addEventListener('input', () => { AUDIO.music = m.value / 100; audioPersist(); applyAudio(); syncVolume(); });
+  f.addEventListener('input', () => {
+    AUDIO.fx = f.value / 100; audioPersist(); applyAudio(); syncVolume();
     clearTimeout(fxPrev); fxPrev = setTimeout(() => sfx.punch(), 120);
   });
-  volUi.addEventListener('input', () => {
-    AUDIO.ui = volUi.value / 100; audioPersist(); applyAudio();
+  u.addEventListener('input', () => {
+    AUDIO.ui = u.value / 100; audioPersist(); applyAudio(); syncVolume();
     clearTimeout(uiPrev); uiPrev = setTimeout(() => sfx.buy(), 120);
   });
 }
+function syncVolume() {
+  for (const [mi, fi, ui] of VOL_SETS) {
+    if (!$(mi)) continue;
+    $(mi).value = Math.round(AUDIO.music * 100);
+    $(fi).value = Math.round(AUDIO.fx * 100);
+    $(ui).value = Math.round(AUDIO.ui * 100);
+  }
+}
+for (const set of VOL_SETS) wireVolume(...set);
+syncVolume();
+
+// ---- pause: freeze the set, tweak the mix, or call it a night ----
+function setPaused(on) {
+  if (state !== 'run' && on) return;
+  paused = !!on;
+  document.body.classList.toggle('paused', paused);
+  $('pauseOv').style.display = paused ? '' : 'none';
+  $('pauseBtn').textContent = paused ? '▶' : '⏸';
+  Music.setMode(paused ? 'menu' : 'run');   // duck the band while we talk
+  if (paused) {
+    syncVolume();
+    $('pauseStats').innerHTML =
+      `SCORE <span class="big">${runScore.toLocaleString()}</span><br>` +
+      `<span class="big">${fmtTime(runT)}</span> survived · <span class="big">${runKos}</span> KOs<br>` +
+      `<span class="big">🤘 ${runCred}</span> gold this set`;
+  }
+}
+const togglePause = () => setPaused(!paused);
+$('pauseBtn').addEventListener('click', togglePause);
+$('resumeBtn').addEventListener('click', () => setPaused(false));
+$('endRunBtn').addEventListener('click', () => {
+  setPaused(false);
+  gameOver();   // banks the gold and posts the score, same as being carried out
+});
 // ---- danger zone: wipe the save (volumes + ad consent survive on purpose) ----
 // Two-tap confirm built into the button — native confirm() dialogs can be
 // silently suppressed by the browser, which made the button look dead.

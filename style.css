@@ -129,6 +129,16 @@ h2 { margin: 0 0 6px; font-size: 26px; color: #ff8f6b; }
   z-index: 20; font-size: 20px; background: rgba(24,12,16,.7); color: #fff;
   border: 1px solid #7a2230; border-radius: 10px; padding: 6px 9px; cursor: pointer;
 }
+/* stacked UNDER mute — the score/gold/KO column owns the space to its left */
+#pauseBtn {
+  position: fixed; display: none;
+  top: calc(env(safe-area-inset-top, 0px) + 52px); right: 10px;
+  z-index: 20; font-size: 20px; background: rgba(24,12,16,.7); color: #fff;
+  border: 1px solid #7a2230; border-radius: 10px; padding: 6px 9px; cursor: pointer;
+  font-family: inherit; line-height: 1;
+}
+/* paused: the thumb controls would only get in the way */
+body.paused .abBtn, body.paused #itemBtn, body.paused #stick { display: none !important; }
 /* touch controls */
 #stick {
   position: fixed; display: none; z-index: 5; pointer-events: none;

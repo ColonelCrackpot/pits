@@ -276,7 +276,7 @@ function buyBeer() {
 
 // the USE key: fire what's in your hand — or, empty-handed at the bar, order
 function itemAction() {
-  if (state !== 'run' || !player || player.ko || player.dead || player.stun > 0) return;
+  if (state !== 'run' || paused || !player || player.ko || player.dead || player.stun > 0) return;
   if (held) {
     if (abChanneling() || (player.chugT || 0) > 0 || (player.smashT || 0) > 0) return;
     const def = ITEM_TYPES[held.type];

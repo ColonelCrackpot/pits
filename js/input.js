@@ -12,7 +12,8 @@ window.addEventListener('keydown', e => {
   kb[e.code] = true;
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   if ((e.code === 'Space' || e.code === 'Enter') && state === 'menu' && $('boardOv').style.display === 'none') { startRun(); return; }
-  if (state === 'run') {
+  if ((e.code === 'Escape' || e.code === 'KeyP') && state === 'run') { togglePause(); return; }
+  if (state === 'run' && !paused) {
     const slot = SLOT_CODES.indexOf(e.code);
     if (slot >= 0) useSlot(slot);
     if (e.code === 'KeyF') itemAction();   // use held item / order at the bar

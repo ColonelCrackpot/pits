@@ -25,12 +25,21 @@ function startRun() {
   ev = null; diver = null;
   moshers = moshers.filter(m => !m.boss && !m.minion);   // no leftovers from attract mode
   state = 'run';
+  paused = false;
+  document.body.classList.remove('paused');
+  $('pauseOv').style.display = 'none';
+  $('pauseBtn').style.display = 'block';
+  $('pauseBtn').textContent = '⏸';
   $('menuOv').style.display = 'none';
   $('overOv').style.display = 'none';
   banner = { txt: 'PIT\'S OPEN', sub: 'take someone out', t: 0, dur: 1.6, color: '#ffb84d' };
 }
 function gameOver() {
   state = 'over';
+  paused = false;
+  document.body.classList.remove('paused');
+  $('pauseOv').style.display = 'none';
+  $('pauseBtn').style.display = 'none';
   Music.setMode('menu');
   runScore += Math.round(runT * 10);   // survival time pays score too
   const t = runT, kos = runKos, score = runScore;
@@ -55,6 +64,10 @@ function gameOver() {
 }
 function showMenu() {
   state = 'menu';
+  paused = false;
+  document.body.classList.remove('paused');
+  $('pauseOv').style.display = 'none';
+  $('pauseBtn').style.display = 'none';
   Music.setMode('menu');
   moshers = moshers.filter(m => !m.isPlayer);
   player = null;
