@@ -4,7 +4,23 @@ Game-a-week #4: you're a metalhead at a metal show. Wade into the pit, swing at
 whoever's closest, rack up CRED, survive the pit events. Human Fall Flat-style
 wobbly ragdoll vibe in a fake-3D (2.5D) venue. (Working folder: `~/Desktop/PITS`.)
 
-## Status: PROTOTYPE — not deployed, no GitHub repo yet
+## Status: LIVE at https://intothepits.com (Cloudflare Pages, push = deploy)
+
+### ⚠ Deploying: bump the script version when code moves between files
+
+`index.html` loads every module with a `?v=YYYYMMDDx` query. **Bump it in the
+same commit** whenever a function moves/renames across files (e.g. render.js
+started calling something items.js defines).
+
+Why: Cloudflare serves `js/` with `max-age=14400` but HTML with `max-age=0`, so
+a returning player runs fresh HTML against up-to-4-hour-old scripts. A mixed set
+of modules throws `X is not defined` every frame and the render loop dies — this
+took the live game down on 2026-07-26. New `?v=` URLs can't be in anyone's
+cache, so everyone gets a matching set instantly.
+
+(`_headers` asks Pages to make js/ always revalidate, which would remove the
+need for this. It is currently being served as a plain file rather than consumed
+as config, so **do not rely on it** — bump the version.)
 
 ## Code structure
 
