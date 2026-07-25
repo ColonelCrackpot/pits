@@ -140,16 +140,18 @@ h2 { margin: 0 0 6px; font-size: 26px; color: #ff8f6b; }
   border-radius: 50%; background: rgba(255,120,110,.55);
   transform: translate(-50%,-50%);
 }
-#swingBtn {
+/* the big thumb button belongs to whatever you're HOLDING — abilities are all
+   the same size in the column above it (js/items.js shows/hides this one) */
+#itemBtn {
   position: fixed; display: none; z-index: 6;
   right: calc(env(safe-area-inset-right, 0px) + 22px);
   bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
-  width: 84px; height: 84px; border-radius: 50%;
-  border: 2px solid #ff5b47; background: rgba(196,31,46,.5);
-  color: #fff; font-size: 30px; font-weight: 900; font-family: inherit;
+  width: 88px; height: 88px; border-radius: 50%;
+  border: 2px solid #ffb84d; background: rgba(150,96,24,.55);
+  color: #fff; font-size: 38px; font-weight: 900; font-family: inherit; padding: 0;
 }
-#swingBtn:active { background: rgba(255,91,71,.75); }
-.touch #stick, .touch #swingBtn { display: block; }
+#itemBtn:active { background: rgba(255,184,77,.8); }
+.touch #stick { display: block; }
 .consent-bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
