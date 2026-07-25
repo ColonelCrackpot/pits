@@ -35,6 +35,13 @@
     mk('🎵 next song', () => { if (Music.onSong) Music.onSong('Dev Track'); });
     mk('🛡 god: off', b => { god = !god; b.textContent = '🛡 god: ' + (god ? 'ON' : 'off'); });
     mk('🤘 +1000 gold', () => PITS.cred(1000));
+    mk('🍺 +40 drunk', () => { drunk = Math.min(100, drunk + 40); });
+    mk('🎸 drop the V', () => PITS.item('eguitar'));
+    mk('🎻 drop bass', () => PITS.item('bass'));
+    mk('🪕 drop acoustic', () => PITS.item('acoustic'));
+    mk('🍾 drop bottle', () => PITS.item('beer'));
+    mk('🥃 drop glass', () => PITS.item('glass'));
+    mk('🔻 drop pick', () => PITS.item('pick'));
     mk('⚡ max abilities', () => PITS.abilities());
     mk('💪 full heal', () => { if (player) player.hp = player.maxhp; });
     mk('☠ kill player', () => PITS.kill());

@@ -4,6 +4,7 @@
 function resetCrowd() {
   moshers = moshers.filter(m => m.isPlayer);
   coins = []; bossProjs = []; ev = null; diver = null;
+  resetItems();
   for (let i = 0; i < 12; i++) spawnNpc(false);   // fresh crowd, current venue's stats
 }
 function startRun() {
@@ -15,13 +16,14 @@ function startRun() {
   windUsed = 0;
   for (const id in abState) { abState[id].cd = 0; abState[id].t = 0; }
   coins = []; bossProjs = [];
+  resetItems();
   ensureLoadout();
   updateAbBtns();
   runT = 0; runCred = 0; runScore = 0; runKos = 0; combo = 0; doubled = false;
   evTimer = 16 + rnd(0, 6);
   nextBossT = 90; bossIdx = 0;
   ev = null; diver = null;
-  moshers = moshers.filter(m => !m.boss);   // no leftover bosses from attract mode
+  moshers = moshers.filter(m => !m.boss && !m.minion);   // no leftovers from attract mode
   state = 'run';
   $('menuOv').style.display = 'none';
   $('overOv').style.display = 'none';
@@ -67,9 +69,15 @@ Music.onEnd = () => {
   ev = null; diver = null;
   evTimer = Math.max(evTimer, 12);
   const keep = maxNpc();          // calm cap (calm already set)
-  const npcs = moshers.filter(m => !m.isPlayer && !m.ko && !m.dead && !m.boss);
-  npcs.slice(keep).forEach(m => { m.leaving = true; });   // bosses never leave
-  if (state === 'run') banner = { txt: 'SONG\'S DONE', sub: 'catch your breath', t: 0, dur: 2, color: '#8fd3ff' };
+  const npcs = moshers.filter(m => !m.isPlayer && !m.ko && !m.dead && !m.boss && !m.minion);
+  npcs.slice(keep).forEach(m => { m.leaving = true; });   // bosses (and their robots) never leave
+  if (state === 'run') {
+    banner = { txt: 'SONG\'S DONE', sub: 'catch your breath', t: 0, dur: 2, color: '#8fd3ff' };
+    // the band flicks a pick into the crowd — a free souvenir, technically a weapon
+    const px = rnd(-120, 120);
+    spawnItem('pick', px, D * 0.8, { vx: rnd(-40, 40), vz: -rnd(160, 240), vy: 170 });
+    floats.push({ x: px, z: D * 0.8, y: 100, txt: '🎸 PICK TOSS!', t: 0, color: '#ffd166' });
+  }
 };
 // …and floods back in when the next track kicks off
 Music.onSong = title => {

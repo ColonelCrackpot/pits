@@ -14,8 +14,14 @@ const UPG = [
   { id: 'boots', icon: '🥾', name: 'Steel Toes',    desc: '+10% move speed',              base: 50  },
   { id: 'reach', icon: '💪', name: 'Windmill Arms', desc: '+15% punch reach & knockback', base: 60  },
   { id: 'pres',  icon: '🤘', name: 'Pit Presence',  desc: '+20% gold earned',             base: 80  },
+  { id: 'liver', icon: '🍻', name: 'Iron Liver',    desc: '+15% buzz per beer',           base: 70  },
+  { id: 'buzz',  icon: '🥴', name: 'Beer Muscles',  desc: '+15% drunk damage bonus',      base: 90  },
   { id: 'wind',  icon: '⚡', name: 'Second Wind',   desc: 'Get back up once per set',     base: 150 },
 ];
+
+// the bar (front-left of the pit): beer fills the DRUNK meter, drunk = damage.
+// cost scales with the venue's gold so a round never stops stinging.
+const BEER = { cost: 5, drunk: 32, decay: 1.1 };
 
 // ---- venues: infinite purchasable levels, each one a harder, re-skinned pit ----
 // Enemy stats scale so a maxed-out venue-N player feels like a fresh venue-1
@@ -118,13 +124,52 @@ const PITS_TRACKS = window.PITS_TRACKS || [
 
 const SKINS = ['#e8b48c', '#c98d63', '#8d5b3c', '#5f3d28', '#f0c9a8'];
 const SHIRTS = ['#2a2230', '#241c26', '#33202a', '#1e2630', '#3a1424', '#2c2c34', '#402a18'];
-const HAIRC = ['#171310', '#2b1d12', '#0d0d0f', '#4a2c14', '#666', '#8a1f1f'];
+const HAIRC = ['#171310', '#2b1d12', '#0d0d0f', '#4a2c14', '#666', '#8a1f1f', '#b8862e', '#d94fb0'];
+
+// ---- hairstyle registry ----
+// Every style the picker (and the crowd) can wear. Chain styles grow verlet
+// hair: segs/sp size the chain, attach moves the root (back / high / front),
+// multi draws the chain as several offset strands (braids, dreads, glam),
+// nocap skips the painted-on roots (skullet's proud dome, the half-shave).
+const HAIRDEF = {
+  long:      { segs: 4, sp: 5.5 },
+  ponytail:  { segs: 4, sp: 5.5, attach: 'high', thin: true, tie: true },
+  bob:       {},
+  mohawk:    {},
+  short:     {},
+  bald:      {},
+  spikes:    {},                                             // liberty spikes
+  deathhawk: {},
+  mullet:    { segs: 3, sp: 4.5 },
+  skullet:   { segs: 3, sp: 4.5, nocap: true },
+  devilock:  { segs: 3, sp: 4, attach: 'front', thin: true },
+  dreads:    { segs: 4, sp: 5, multi: [-4, 0, 4] },
+  braids:    { segs: 4, sp: 5, thin: true, multi: [-5, 5], tie: true },
+  glam:      { segs: 4, sp: 5, multi: [-5, 0, 5] },
+  rattail:   { segs: 3, sp: 5, thin: true },
+  halfshave: { segs: 3, sp: 5, thin: true, nocap: true },
+  bun:       {},
+  bandana:   {},
+  slick:     {},
+  alexi:     { segs: 5, sp: 5.5 },
+};
+const HAIRNAME = {
+  long: 'Headbanger', ponytail: 'Ponytail', bob: 'Bob', mohawk: 'Mohawk', short: 'Short',
+  bald: 'Bald', spikes: 'Liberty Spikes', deathhawk: 'Deathhawk', mullet: 'Mullet',
+  skullet: 'Skullet', devilock: 'Devilock', dreads: 'Dreadlocks', braids: 'Viking Braids',
+  glam: 'Glam Mane', rattail: 'Rattail', halfshave: 'Half-Shaved', bun: 'Undercut Bun',
+  bandana: 'Bandana', slick: 'Slickback', alexi: 'Alexi',
+};
+// what the crowd shows up wearing (on top of the classic long/mohawk/short mix)
+const MASC_STYLES = ['spikes', 'deathhawk', 'mullet', 'skullet', 'devilock', 'dreads', 'rattail', 'slick', 'bandana', 'bun'];
+const FEM_STYLES = ['braids', 'glam', 'halfshave', 'bun', 'bandana', 'dreads', 'deathhawk'];
 
 const STYLE_OPTS = [
+  { k: 'body', name: 'Body', vals: ['dude', 'girl'] },
   { k: 'skin', name: 'Skin', vals: SKINS, color: true },
   { k: 'shirt', name: 'Shirt', vals: ['#a3162a', '#181418', '#241a2e', '#0f2f24', '#1e2630', '#6b1010', '#e8e4da', '#3d1f52', '#5c4a12'], color: true },
   { k: 'pants', name: 'Jeans', vals: ['#333848', '#3a4260', '#4a3a34', '#1a1c22', '#5a2430'], color: true },
-  { k: 'hairStyle', name: 'Hair', vals: ['long', 'mohawk', 'short', 'bald'] },
+  { k: 'hairStyle', name: 'Hair', vals: Object.keys(HAIRDEF) },
   { k: 'hair', name: 'Hair color', vals: ['#171310', '#2b1d12', '#4a2c14', '#666', '#8a1f1f', '#b8862e', '#2a5c8f', '#d94fb0'], color: true },
   { k: 'beard', name: 'Beard', vals: [false, true] },
 ];

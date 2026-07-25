@@ -30,6 +30,8 @@ function hit(m, dmg, dir, att, kbMult) {
   if (m.isPlayer && abState.berserk.t > 0) dmg *= 0.5;   // berserk shrugs it off
   m.hp -= dmg; m.flash = 1; m.regenT = 0;
   m.lastHitBy = att;
+  const TH = MOSHER_TYPES[m.type];
+  if (TH && TH.onHit) TH.onHit(m, att, dmg);   // per-type reactions (Andre's rage-quit)
   const kb = (150 + dmg * 7 * (att && att.isPlayer ? pStats().kb : 1)) * (kbMult || 1) * (m.kbResist || 1);
   m.vx += dir.x * Math.min(560 * (kbMult || 1), kb);
   m.vz += dir.z * Math.min(560 * (kbMult || 1), kb);
@@ -52,6 +54,8 @@ function koMosher(m, att, dir) {
   buildRagdoll(m, dir);
   sfx.ko();
   spawnStars(m.x, m.z, m.h);
+  const TY = MOSHER_TYPES[m.type];
+  if (TY && TY.onKo) TY.onKo(m);   // per-type loot / death effects (Luke drops the V)
   // the pit never empties: a fresh body walks in the moment one drops —
   // EXCEPT during a wall of death (one wall, one impact) and never for bosses
   if (!m.isPlayer && !m.boss && !(ev && ev.type === 'wall') && liveNpc() < maxNpc()) spawnNpc(true);
@@ -68,6 +72,16 @@ function koMosher(m, att, dir) {
     if (combo > 1 && !m.boss) floats.push({ x: m.x, z: m.z, y: m.h + 34, txt: combo + 'x!', t: 0, color: '#7bff9e' });
   } else if (!m.isPlayer && state === 'run' && Math.random() < 0.5) {
     spawnCoins(m.x, m.z, Math.max(1, Math.round(venueMult('gold'))), 1);   // ambient KOs shake a little loose
+  }
+  // loot table: bottles & glasses shake loose from the crowd, guitars from bosses
+  if (!m.isPlayer && state === 'run') {
+    const r = Math.random();
+    if (m.boss) {
+      if (m.type !== 'luke' && r < 0.35) spawnItem(pick(['bass', 'acoustic', 'eguitar']), m.x, m.z);
+    } else if (!m.minion) {
+      if (r < 0.07) spawnItem('beer', m.x, m.z);          // 1-in-4 of these still has beer in it
+      else if (r < 0.14) spawnItem('glass', m.x, m.z);
+    }
   }
 }
 function spawnCoins(x, z, total, n) {

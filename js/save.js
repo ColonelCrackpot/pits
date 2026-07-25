@@ -4,7 +4,7 @@ const SAVE_KEY = 'pits_save';
 let save = { cred: 0, up: {}, bestTime: 0, bestKos: 0, bestScore: 0, muted: false };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
 save.style = Object.assign(
-  { skin: '#e8b48c', shirt: '#a3162a', pants: '#333848', hairStyle: 'long', hair: '#171310', beard: false },
+  { body: 'dude', skin: '#e8b48c', shirt: '#a3162a', pants: '#333848', hairStyle: 'long', hair: '#171310', beard: false },
   save.style || {});
 const AB_ZERO = {};
 for (const a of ABILITIES) AB_ZERO[a.id] = 0;

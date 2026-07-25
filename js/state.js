@@ -17,8 +17,8 @@ if (isTouch) document.body.classList.add('touch');
 
 const intensity = () => state === 'run' ? Math.min(1, runT / 150) : 0.25;
 const maxNpc = () => calm > 0 ? Math.ceil((12 + 14 * intensity()) * 0.35) : 12 + Math.floor(14 * intensity());
-const liveNpc = () => moshers.reduce((n, m) => n + (!m.isPlayer && !m.dead && !m.ko && !m.boss ? 1 : 0), 0);
+const liveNpc = () => moshers.reduce((n, m) => n + (!m.isPlayer && !m.dead && !m.ko && !m.boss && !m.minion ? 1 : 0), 0);
 let nextBossT = 90;           // run time of the next boss entrance
-const BOSS_ROTATION = ['jarrad', 'shane', 'luke', 'kylegym', 'adrian', 'reno', 'kylecargo', 'andre', 'barry'];
+const BOSS_ROTATION = ['jarrad', 'shane', 'luke', 'kylegym', 'gothtwins', 'adrian', 'reno', 'andre', 'barry'];
 let bossIdx = 0;
-let bossProjs = [];           // things Cargo Shorts Kyle throws at you
+let bossProjs = [];           // thrown boss projectiles (idle right now — infra stays)

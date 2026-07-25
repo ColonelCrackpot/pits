@@ -24,6 +24,12 @@ function updateMosher(m, dt) {
     const sp = pStats().speed * slow;
     m.tvx = ix * sp; m.tvz = iz * sp;
     if (d > 0.2) m.face = { x: ix / (d || 1), z: iz / (d || 1) };
+    // past half a meter of drunk the legs start negotiating their own route
+    if (drunk > 45) {
+      const w = (drunk - 45) / 55;
+      m.tvx += Math.sin(runT * 2.3) * 130 * w;
+      m.tvz += Math.cos(runT * 1.7) * 85 * w;
+    }
     // dash moves own the wheels; the mower rev keeps you planted mid-yank
     if ((abState.mower.rev || 0) > 0) { m.tvx = 0; m.tvz = 0; }
     else if (abState.mower.t > 0) { m.tvx = abState.mower.dir.x * 400; m.tvz = abState.mower.dir.z * 400; }
@@ -176,6 +182,11 @@ function simArms(m, dt) {
       }
       // twostep: arms just swing naturally with the skips (verlet does it)
     }
+    // held item choreography (bottle hand, etc.)
+    if (m.isPlayer && held) {
+      const IT = ITEM_TYPES[held.type];
+      if (IT.arm) IT.arm(m, arm, sgn, shY);
+    }
     // swing: drive the hand toward the punch target
     if (m.swing) {
       const s = Math.sin(Math.PI * m.swing.t / m.swing.dur);
@@ -204,14 +215,18 @@ function simHair(m, dt) {
   if (!m.hair) return;
   const headU = m.headU || 0, headY = m.headY || m.h;
   const fx = m.face.x >= 0 ? 1 : -1;
-  let ax = headU - fx * 3.5, ay = headY + 3;
+  const hdef = HAIRDEF[hairStyleOf(m.look)] || {};
+  // ponytails anchor high on the back of the skull, devilocks on the FRONT
+  let ax = headU + (hdef.attach === 'front' ? fx * 4 : -fx * (hdef.attach === 'high' ? 4.5 : 3.5));
+  let ay = headY + (hdef.attach === 'high' ? 6 : hdef.attach === 'front' ? 2 : 3);
+  const sp = hdef.sp || 5.5;
   for (const h of m.hair) {
     const vx2 = (h.x - h.px) * 0.9 - m.vx * dt * 0.5;
     const vy2 = (h.y - h.py) * 0.9;
     h.px = h.x; h.py = h.y;
     h.x += vx2; h.y += vy2 - 500 * dt * dt;
     const dx = h.x - ax, dy = h.y - ay, d = hyp(dx, dy) || 0.001;
-    const diff = (d - 5.5) / d;
+    const diff = (d - sp) / d;
     h.x -= dx * diff; h.y -= dy * diff;
     ax = h.x; ay = h.y;
   }
@@ -313,6 +328,7 @@ function update(dt) {
     }
   }
   coins = coins.filter(c => c.t < 12);
+  updateItems(dt);   // floor loot, chugging, the drunk meter's slow sobering
   for (const f of floats) f.t += dt;
   floats = floats.filter(f => f.t < 1.1);
   if (banner) { banner.t += dt; if (banner.t > banner.dur) banner = null; }

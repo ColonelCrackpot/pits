@@ -11,7 +11,7 @@ function frame(now) {
   if (W !== innerWidth || H !== innerHeight) relayout();   // embeds can start 0-sized without firing resize
   update(dt);
   render();
-  if (isTouch) updateAbBtns();
+  if (isTouch) { updateAbBtns(); updateItemBtn(); }
 }
 requestAnimationFrame(frame);
 
@@ -31,6 +31,8 @@ window.PITS = {
   nowPlaying: () => Music.now(),
   cred: n => { save.cred += (n || 500); persist(); refreshMenu(); },
   kill: () => { if (player) { player.hp = 0; playerDown(); } },
+  drunk: n => { drunk = clamp(n == null ? 100 : n, 0, 100); },
+  item: t => { if (player) spawnItem(t || 'beer', player.x + 34, player.z); },
   state: () => ({
     state, runT: Math.round(runT), runScore, runCred, runKos,
     hp: player ? Math.round(player.hp) : null,

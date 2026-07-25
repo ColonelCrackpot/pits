@@ -131,8 +131,8 @@ function refreshMenu() {
     ab.appendChild(row);
   }
   $('menuHint').innerHTML = isTouch
-    ? 'You <b>punch on your own</b> — just get close. <b>Left thumb</b> moves, the <b>round buttons</b> fire your equipped moves. Gold hits the floor — <b>walk over it</b> to scoop.'
-    : 'You <b>punch on your own</b> — just get close. <b>WASD</b> moves, <b>SPACE / Q / E / R</b> fire your equipped moves. Gold hits the floor — <b>walk over it</b> to scoop.';
+    ? 'You <b>punch on your own</b> — just get close. <b>Left thumb</b> moves, the <b>round buttons</b> fire your equipped moves. Gold hits the floor — <b>walk over it</b> to scoop. Thirsty? Hit the <b>PIT STOP bar</b> (front left) — beer makes you hit harder.'
+    : 'You <b>punch on your own</b> — just get close. <b>WASD</b> moves, <b>SPACE / Q / E / R</b> fire your equipped moves, <b>F</b> uses whatever you\'re holding. Gold hits the floor — <b>walk over it</b> to scoop. Thirsty? Hit the <b>PIT STOP bar</b> (front left) — beer makes you hit harder.';
 }
 refreshMenu();
 
@@ -146,7 +146,9 @@ function renderStyle() {
     row.className = 'strow';
     const label = o.color
       ? `<span class="swatch" style="background:${cur}"></span>`
-      : (o.k === 'beard' ? (cur ? 'Yes' : 'No') : String(cur).charAt(0).toUpperCase() + String(cur).slice(1));
+      : o.k === 'beard' ? (cur ? 'Yes' : 'No')
+      : o.k === 'hairStyle' ? (HAIRNAME[cur] || cur)
+      : String(cur).charAt(0).toUpperCase() + String(cur).slice(1);
     row.innerHTML =
       `<div class="slabel">${o.name}</div>
       <button class="sarrow prev">◀</button>
@@ -168,6 +170,7 @@ function renderStyle() {
 function drawStylePreview() {
   const c = $('stylePrev'), p = c.getContext('2d');
   const st = save.style;
+  const fem = st.body === 'girl';
   p.clearRect(0, 0, c.width, c.height);
   const cx2 = 60, foot = 136, s = 1.5;
   p.lineCap = 'round';
@@ -175,23 +178,57 @@ function drawStylePreview() {
   p.beginPath(); p.ellipse(cx2, foot + 4, 26, 8, 0, 0, 6.28); p.fill();
   const hipY = foot - 26 * s, neckY = foot - 45 * s, headY = foot - 52 * s;
   // legs
-  p.strokeStyle = st.pants; p.lineWidth = 7;
+  p.strokeStyle = st.pants; p.lineWidth = fem ? 6 : 7;
   for (const sgn of [-1, 1]) {
     p.beginPath(); p.moveTo(cx2, hipY); p.quadraticCurveTo(cx2 + sgn * 7, (hipY + foot) / 2, cx2 + sgn * 11, foot); p.stroke();
   }
   // arms
-  p.strokeStyle = st.skin; p.lineWidth = 6;
+  p.strokeStyle = st.skin; p.lineWidth = fem ? 5 : 6;
   for (const sgn of [-1, 1]) {
     p.beginPath(); p.moveTo(cx2 + sgn * 9, neckY + 8); p.quadraticCurveTo(cx2 + sgn * 17, neckY + 22, cx2 + sgn * 14, neckY + 38); p.stroke();
   }
-  // torso
-  p.strokeStyle = st.shirt; p.lineWidth = 13;
+  // torso (fem: slimmer line, wider hip)
+  p.strokeStyle = st.shirt; p.lineWidth = fem ? 10 : 13;
   p.beginPath(); p.moveTo(cx2, hipY); p.lineTo(cx2, neckY); p.stroke();
-  // long hair behind the head
-  if (st.hairStyle === 'long') {
-    p.strokeStyle = st.hair; p.lineWidth = 7;
+  if (fem) {
+    p.fillStyle = st.pants;
+    p.beginPath(); p.ellipse(cx2, hipY, 10, 5.5, 0, 0, 6.28); p.fill();
+  }
+  // hair that hangs behind the head
+  const HS = st.hairStyle;
+  p.strokeStyle = st.hair;
+  if (HS === 'long' || HS === 'alexi' || HS === 'glam') {
+    p.lineWidth = HS === 'glam' ? 8 : 7;
     p.beginPath(); p.moveTo(cx2 - 5, headY); p.quadraticCurveTo(cx2 - 12, headY + 18, cx2 - 10, headY + 34); p.stroke();
     p.beginPath(); p.moveTo(cx2 + 5, headY); p.quadraticCurveTo(cx2 + 12, headY + 18, cx2 + 10, headY + 34); p.stroke();
+    if (HS === 'glam') { p.beginPath(); p.moveTo(cx2, headY - 4); p.quadraticCurveTo(cx2 + 3, headY + 16, cx2, headY + 30); p.stroke(); }
+  } else if (HS === 'ponytail' || HS === 'rattail') {
+    p.lineWidth = HS === 'rattail' ? 3.5 : 5.5;
+    p.beginPath(); p.moveTo(cx2 + 7, headY - 8); p.quadraticCurveTo(cx2 + 16, headY + 8, cx2 + 13, headY + 26); p.stroke();
+    if (HS === 'ponytail') {
+      p.fillStyle = '#3a1424';
+      p.beginPath(); p.arc(cx2 + 10, headY - 2, 3, 0, 6.28); p.fill();
+    }
+  } else if (HS === 'braids') {
+    p.lineWidth = 4.5;
+    for (const sgn of [-1, 1]) {
+      p.beginPath(); p.moveTo(cx2 + sgn * 8, headY - 2); p.quadraticCurveTo(cx2 + sgn * 14, headY + 12, cx2 + sgn * 12, headY + 26); p.stroke();
+      p.fillStyle = '#3a1424';
+      p.beginPath(); p.arc(cx2 + sgn * 12, headY + 27, 3, 0, 6.28); p.fill();
+    }
+  } else if (HS === 'dreads') {
+    p.lineWidth = 4.5;
+    for (const off of [-9, -3, 3, 9]) {
+      p.beginPath(); p.moveTo(cx2 + off * 0.7, headY - 4); p.quadraticCurveTo(cx2 + off, headY + 10, cx2 + off, headY + 22); p.stroke();
+    }
+  } else if (HS === 'mullet' || HS === 'skullet') {
+    p.lineWidth = 6;
+    for (const sgn of [-1, 1]) {
+      p.beginPath(); p.moveTo(cx2 + sgn * 5, headY - 1); p.quadraticCurveTo(cx2 + sgn * 10, headY + 10, cx2 + sgn * 8, headY + 21); p.stroke();
+    }
+  } else if (HS === 'halfshave') {
+    p.lineWidth = 5.5;
+    p.beginPath(); p.moveTo(cx2 - 7, headY - 4); p.quadraticCurveTo(cx2 - 13, headY + 12, cx2 - 11, headY + 26); p.stroke();
   }
   // head
   p.fillStyle = st.skin;
@@ -200,12 +237,64 @@ function drawStylePreview() {
     p.fillStyle = st.hair;
     p.beginPath(); p.arc(cx2, headY + 6, 6.5, 0, 6.28); p.fill();
   }
-  if (st.hairStyle === 'mohawk') {
-    p.fillStyle = st.hair;
+  p.fillStyle = st.hair;
+  if (HS === 'mohawk') {
     p.beginPath(); p.moveTo(cx2 - 9, headY - 4); p.lineTo(cx2, headY - 24); p.lineTo(cx2 + 9, headY - 4); p.closePath(); p.fill();
-  } else if (st.hairStyle === 'long' || st.hairStyle === 'short') {
-    p.fillStyle = st.hair;
-    p.beginPath(); p.arc(cx2, headY - 4, st.hairStyle === 'long' ? 10.5 : 10, Math.PI, 0); p.fill();
+  } else if (HS === 'bob') {
+    p.beginPath(); p.arc(cx2, headY - 3, 12, Math.PI, 0); p.fill();
+    for (const sgn of [-1, 1]) {
+      p.beginPath(); p.ellipse(cx2 + sgn * 9.5, headY + 2, 4.2, 8.5, 0, 0, 6.28); p.fill();
+    }
+  } else if (HS === 'spikes') {
+    for (let k = 0; k < 5; k++) {
+      const ang = -Math.PI * (0.15 + 0.7 * k / 4);
+      p.beginPath();
+      p.moveTo(cx2 + Math.cos(ang - 0.3) * 10, headY - 1 + Math.sin(ang - 0.3) * 10);
+      p.lineTo(cx2 + Math.cos(ang) * 25, headY - 1 + Math.sin(ang) * 25);
+      p.lineTo(cx2 + Math.cos(ang + 0.3) * 10, headY - 1 + Math.sin(ang + 0.3) * 10);
+      p.closePath(); p.fill();
+    }
+  } else if (HS === 'deathhawk') {
+    for (const k of [-1, 0, 1]) {
+      p.beginPath();
+      p.moveTo(cx2 + k * 5.5 - 5.5, headY - 6);
+      p.lineTo(cx2 + k * 7 - 4, headY - 24 + Math.abs(k) * 5);
+      p.lineTo(cx2 + k * 5.5 + 5.5, headY - 6);
+      p.closePath(); p.fill();
+    }
+  } else if (HS === 'bun') {
+    p.beginPath(); p.arc(cx2, headY - 4, 10.5, Math.PI, 0); p.fill();
+    p.beginPath(); p.arc(cx2 - 2, headY - 15.5, 5.2, 0, 6.28); p.fill();
+  } else if (HS === 'bandana') {
+    p.beginPath(); p.arc(cx2, headY - 3, 10.5, Math.PI, 0); p.fill();
+    p.strokeStyle = '#c43b2e'; p.lineWidth = 6;
+    p.beginPath(); p.arc(cx2, headY - 4, 9.5, Math.PI * 1.03, Math.PI * 1.97); p.stroke();
+    p.fillStyle = '#c43b2e';
+    p.beginPath(); p.moveTo(cx2 - 9, headY - 7); p.lineTo(cx2 - 17, headY); p.lineTo(cx2 - 9, headY - 1); p.closePath(); p.fill();
+  } else if (HS === 'slick') {
+    p.beginPath(); p.ellipse(cx2 - 1, headY - 5, 11, 8.5, 0, Math.PI, 0); p.fill();
+    p.strokeStyle = 'rgba(255,255,255,.35)'; p.lineWidth = 1.5;
+    p.beginPath(); p.arc(cx2 - 2.5, headY - 5, 7.5, Math.PI * 1.15, Math.PI * 1.55); p.stroke();
+  } else if (HS === 'devilock') {
+    p.beginPath(); p.arc(cx2, headY - 4, 10.5, Math.PI, 0); p.fill();
+    p.strokeStyle = st.hair; p.lineWidth = 5;
+    p.beginPath(); p.moveTo(cx2 + 3, headY - 10); p.quadraticCurveTo(cx2 + 7, headY + 2, cx2 + 4, headY + 13); p.stroke();
+  } else if (HS === 'halfshave') {
+    p.beginPath();
+    p.arc(cx2, headY - 3, 11, Math.PI * 0.75, Math.PI * 1.62);
+    p.lineTo(cx2, headY - 3);
+    p.closePath(); p.fill();
+  } else if (HS === 'alexi') {
+    p.beginPath(); p.arc(cx2, headY - 4, 10.5, Math.PI, 0); p.fill();
+    p.strokeStyle = st.hair; p.lineWidth = 5;
+    for (const sgn of [-1, 1]) {
+      p.beginPath(); p.moveTo(cx2 + sgn * 8, headY - 6); p.quadraticCurveTo(cx2 + sgn * 11, headY + 4, cx2 + sgn * 9, headY + 14); p.stroke();
+    }
+    p.strokeStyle = 'rgba(0,0,0,.35)'; p.lineWidth = 2;
+    p.beginPath(); p.moveTo(cx2, headY - 14.5); p.lineTo(cx2, headY - 7); p.stroke();
+  } else if (HS !== 'bald' && HS !== 'skullet') {
+    // every remaining style wears the standard cap (glam gets extra volume)
+    p.beginPath(); p.arc(cx2, headY - 4, HS === 'glam' ? 12.5 : 10.5, Math.PI, 0); p.fill();
   }
 }
 $('styleBtn').addEventListener('click', () => {

@@ -24,6 +24,7 @@ order (each file may use anything ABOVE it at load time, anything at call time):
 | `js/moshers.js` | **MOSHER_TYPES registry** (bosses go here), body factory, player style, pStats |
 | `js/combat.js` | swings, hit/KO, ragdoll verlet, combat FX |
 | `js/abilities.js` | **ABILITY_IMPL registry** (new moves go here) + activation/cooldowns |
+| `js/items.js` | **ITEM_TYPES registry** (new pickups go here), the PIT STOP bar, drunk meter |
 | `js/ai.js` | NPC decisions + steering modes |
 | `js/sim.js` | per-frame update: bodies, arms/hair verlet, collisions, spawning |
 | `js/events.js` | **EVENTS registry** (new pit events go here): wall/circle/diver/heal |
@@ -41,6 +42,11 @@ order (each file may use anything ABOVE it at load time, anything at call time):
   (js/abilities.js) with `use()` and optional `tick()`.
 - **New pit event** → entry in `EVENTS` (js/events.js) with `weight`, `start`,
   `update`, optional `steer`/`drawFloor`/`drawWorld`.
+- **New pickup item** → entry in `ITEM_TYPES` (js/items.js) with `name`/`icon`/
+  `uses`/`use()` and optional `prop`/`arm()`/`drawHeld()`/`breakFx()`/`linger`;
+  drop one with `spawnItem(type, x, z)` (e.g. from a boss `onKo(m)` hook —
+  MOSHER_TYPES entries also support `onKo` now). Walk over to pick up (one hand,
+  one item), F / 🎒 button to use.
 
 ## Features
 - 2.5D venue: band + light rig on stage, barrier crowd, pit below. Procedural

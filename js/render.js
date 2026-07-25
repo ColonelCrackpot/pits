@@ -21,6 +21,7 @@ function render() {
   drawEventWorld();
   // …and the front row with their backs to the camera, in front of everything
   drawFrontCrowd(beat);
+  drawBar(beat);   // the PIT STOP counter claims the front-left corner
 
   for (const c of coins) {   // loose change glinting on the floor
     const pr = proj(c.x, c.z, c.y);
@@ -31,6 +32,7 @@ function render() {
     ctx.beginPath(); ctx.ellipse(pr.x, pr.y, 3.2 * pr.s, 2.4 * pr.s, 0, 0, 6.28); ctx.fill();
   }
   ctx.globalAlpha = 1;
+  drawItems();   // loot waiting on the floor
   for (const p of bossProjs) {   // incoming pocket debris
     const pr = proj(p.x, p.z, p.y);
     ctx.save();
@@ -302,8 +304,10 @@ function drawFrontCrowd(beat) {
   const t = performance.now() / 1000;
   ctx.fillStyle = '#070509';
   const n = Math.ceil(W / (46 * s)) + 2;
+  const gapX = W / 2 - bound(z) * 0.26 * s;   // the bar owns the front-left corner
   for (let i = 0; i < n; i++) {
     const x = (i - 0.5) * 46 * s + Math.sin(i * 5.1) * 10 * s;
+    if (x < gapX) continue;
     const bob = Math.sin(t * 8.2 + i * 2.1) * 5 * s * (0.6 + beat * 0.6);
     ctx.beginPath();
     ctx.arc(x, y - 58 * s + bob, 10 * s, 0, 6.28);
@@ -353,7 +357,7 @@ function drawMosher(m) {
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     }
     // torso
-    ctx.strokeStyle = L.shirt; ctx.lineWidth = th * 1.7;
+    ctx.strokeStyle = L.shirt; ctx.lineWidth = th * (L.fem ? 1.4 : 1.7);
     const nk = px2(r.neck.x, r.neck.y), hp2 = px2(r.hip.x, r.hip.y);
     ctx.beginPath(); ctx.moveTo(nk.x, nk.y); ctx.lineTo(hp2.x, hp2.y); ctx.stroke();
     // arms
@@ -455,11 +459,15 @@ function drawMosher(m) {
   const farArm = m.face.x >= 0 ? m.armL : m.armR;
   const nearArm = m.face.x >= 0 ? m.armR : m.armL;
   drawArm(m, farArm, s, px2, flash, true);
-  // torso
+  // torso — fem builds run slimmer through the middle, wider at the hip
   ctx.strokeStyle = flash ? '#fff' : L.shirt;
-  ctx.lineWidth = th * 1.9;
+  ctx.lineWidth = th * (L.fem ? 1.5 : 1.9);
   const hip = px2(lean * 6, hipY), neck = px2(neckU, neckY);
   ctx.beginPath(); ctx.moveTo(hip.x, hip.y); ctx.lineTo(neck.x, neck.y); ctx.stroke();
+  if (L.fem) {
+    ctx.fillStyle = flash ? '#fff' : L.pants;
+    ctx.beginPath(); ctx.ellipse(hip.x, hip.y, 6 * s, 3.2 * s, 0, 0, 6.28); ctx.fill();
+  }
   if (L.logo && !flash) {   // band logo on the shirt
     ctx.save();
     ctx.translate((hip.x + neck.x) / 2, (hip.y + neck.y) / 2);
@@ -477,14 +485,27 @@ function drawMosher(m) {
   const headY = neckY + Math.cos(bang) * 10;
   m.headU = headU; m.headY = headY;
   const hd = px2(headU, headY);
-  if (m.hair) {   // long hair hangs from the back of the skull, drawn behind the head
-    ctx.lineWidth = Math.max(2, 4.6 * s);
-    let hx0 = hd.x - fx * 3 * s, hy0 = hd.y - 3 * s;
-    for (let i = 0; i < m.hair.length; i++) {
-      const hp3 = px2(m.hair[i].x, m.hair[i].y);
-      ctx.strokeStyle = flash ? '#fff' : (L.hairTip && i > 0 ? L.hairTip : L.hair);
-      ctx.beginPath(); ctx.moveTo(hx0, hy0); ctx.lineTo(hp3.x, hp3.y); ctx.stroke();
-      hx0 = hp3.x; hy0 = hp3.y;
+  const hdef = HAIRDEF[hairStyleOf(L)] || {};
+  if (m.hair && hdef.attach !== 'front') {   // hair chains sway behind the head
+    const offs = hdef.multi || [0];          // braids/dreads/glam: several strands
+    ctx.lineWidth = Math.max(2, (hdef.thin || offs.length > 1 ? 3.2 : 4.6) * s);
+    for (const off of offs) {
+      let hx0 = hd.x - fx * (hdef.attach === 'high' ? 4 : 3) * s + off * 0.5 * s;
+      let hy0 = hd.y - (hdef.attach === 'high' ? 4.5 : 3) * s;
+      for (let i = 0; i < m.hair.length; i++) {
+        const hp3 = px2(m.hair[i].x + off, m.hair[i].y);
+        ctx.strokeStyle = flash ? '#fff' : (L.hairTip && i > 0 ? L.hairTip : L.hair);
+        ctx.beginPath(); ctx.moveTo(hx0, hy0); ctx.lineTo(hp3.x, hp3.y); ctx.stroke();
+        if (hdef.tie && i === 0) {   // the hair tie
+          ctx.fillStyle = '#3a1424';
+          ctx.beginPath(); ctx.arc((hx0 + hp3.x) / 2, (hy0 + hp3.y) / 2, 2 * s, 0, 6.28); ctx.fill();
+        }
+        hx0 = hp3.x; hy0 = hp3.y;
+      }
+      if (hdef.tie && offs.length > 1) {   // braid bobbles at the tips
+        ctx.fillStyle = '#3a1424';
+        ctx.beginPath(); ctx.arc(hx0, hy0, 1.8 * s, 0, 6.28); ctx.fill();
+      }
     }
   }
   ctx.fillStyle = L.mask === 'gold' ? (flash ? '#fff' : '#d9a92c') : (flash ? '#fff' : L.skin);
@@ -515,47 +536,179 @@ function drawMosher(m) {
     ctx.fillStyle = flash ? '#eee' : L.hair;
     ctx.beginPath(); ctx.arc(hd.x + fx * 1.5 * s, hd.y + 3.5 * s, 4 * s, 0, 6.28); ctx.fill();
   }
-  if (m.hair && L.mask !== 'gold') {   // hairline cap for long-hair heads (roots colour)
+  if (m.hair && L.mask !== 'gold' && !hdef.nocap) {   // roots cap (skullet keeps the dome)
     ctx.fillStyle = flash ? '#fff' : L.hair;
     ctx.beginPath(); ctx.arc(hd.x, hd.y - 2 * s, 6.6 * s, Math.PI, 0); ctx.fill();
   }
+  if (L.bot && !flash) {   // service antenna + optical visor
+    ctx.strokeStyle = '#7a8494';
+    ctx.lineWidth = Math.max(1, 1.4 * s);
+    ctx.beginPath(); ctx.moveTo(hd.x, hd.y - 7 * s); ctx.lineTo(hd.x, hd.y - 12.5 * s); ctx.stroke();
+    ctx.fillStyle = Math.sin(performance.now() / 280) > 0 ? '#ff4d4d' : '#8fd3ff';
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 13.6 * s, 1.6 * s, 0, 6.28); ctx.fill();
+    ctx.fillStyle = '#1a2028';
+    ctx.fillRect(hd.x - 5 * s + fx * 1.2 * s, hd.y - 2.6 * s, 9.5 * s, 3.2 * s);
+    ctx.fillStyle = '#ff3b47';
+    ctx.beginPath(); ctx.arc(hd.x + fx * 3 * s, hd.y - 1 * s, 1.2 * s, 0, 6.28); ctx.fill();
+  }
+  const HS = L.mask === 'gold' ? 'bald' : hairStyleOf(L);
+  ctx.fillStyle = flash ? '#fff' : L.hair;
   if (L.mask === 'gold') {
     // no hair styles over the mask
-  } else if (L.mohawk) {
-    ctx.fillStyle = flash ? '#fff' : L.hair;
+  } else if (HS === 'bob') {   // the bob: full cap plus side curtains down to the jaw
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 1.6 * s, 7.6 * s, Math.PI, 0); ctx.fill();
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(hd.x + sgn * 6 * s, hd.y + 1.2 * s, 2.7 * s, 5.2 * s, 0, 0, 6.28);
+      ctx.fill();
+    }
+  } else if (HS === 'mohawk') {
     ctx.beginPath();
     ctx.moveTo(hd.x - 6 * s, hd.y - 2 * s);
     ctx.lineTo(hd.x, hd.y - 14 * s);
     ctx.lineTo(hd.x + 6 * s, hd.y - 2 * s);
     ctx.closePath(); ctx.fill();
-  } else if (!L.bald && !m.hair) {
-    ctx.fillStyle = flash ? '#fff' : L.hair;
+  } else if (HS === 'spikes') {   // liberty spikes: a crown of daggers
+    for (let k = 0; k < 5; k++) {
+      const ang = -Math.PI * (0.15 + 0.7 * k / 4);
+      ctx.beginPath();
+      ctx.moveTo(hd.x + Math.cos(ang - 0.3) * 6.2 * s, hd.y - 1 * s + Math.sin(ang - 0.3) * 6.2 * s);
+      ctx.lineTo(hd.x + Math.cos(ang) * 15.5 * s, hd.y - 1 * s + Math.sin(ang) * 15.5 * s);
+      ctx.lineTo(hd.x + Math.cos(ang + 0.3) * 6.2 * s, hd.y - 1 * s + Math.sin(ang + 0.3) * 6.2 * s);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (HS === 'deathhawk') {   // wide floppy crest leaning off the back
+    for (const k of [-1, 0, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(hd.x + (k * 3.4 - 3.4) * s, hd.y - 4 * s);
+      ctx.lineTo(hd.x + (k * 4.4 - fx * 2.4) * s, hd.y - (14.5 - Math.abs(k) * 3) * s);
+      ctx.lineTo(hd.x + (k * 3.4 + 3.4) * s, hd.y - 4 * s);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (HS === 'bun') {   // undercut bun: tight dome, knot on top
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 2.4 * s, 6.6 * s, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(hd.x - fx * 1.4 * s, hd.y - 9.6 * s, 3.2 * s, 0, 6.28); ctx.fill();
+  } else if (HS === 'bandana') {   // knotted over the skull, tail in the wind
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 2 * s, 6.6 * s, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = flash ? '#fff' : '#c43b2e';
+    ctx.lineWidth = Math.max(2, 3.4 * s);
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 2.6 * s, 6 * s, Math.PI * 1.02, Math.PI * 1.98); ctx.stroke();
+    ctx.fillStyle = flash ? '#fff' : '#c43b2e';
+    ctx.beginPath();
+    ctx.moveTo(hd.x - fx * 5.6 * s, hd.y - 4 * s);
+    ctx.lineTo(hd.x - fx * 10 * s, hd.y + 1 * s);
+    ctx.lineTo(hd.x - fx * 5 * s, hd.y - 0.5 * s);
+    ctx.closePath(); ctx.fill();
+  } else if (HS === 'slick') {   // combed straight back, still wet
+    ctx.beginPath(); ctx.ellipse(hd.x - fx * 0.8 * s, hd.y - 3 * s, 6.9 * s, 5.4 * s, 0, Math.PI, 0); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.3)';
+    ctx.lineWidth = Math.max(1, 1 * s);
+    ctx.beginPath(); ctx.arc(hd.x - fx * 1.5 * s, hd.y - 3 * s, 4.6 * s, Math.PI * 1.15, Math.PI * 1.55); ctx.stroke();
+  } else if (HS === 'devilock') {   // slick sides, one long lock over the face
+    ctx.beginPath(); ctx.arc(hd.x, hd.y - 2.4 * s, 6.6 * s, Math.PI, 0); ctx.fill();
+    if (m.hair) {
+      ctx.strokeStyle = flash ? '#fff' : L.hair;
+      ctx.lineWidth = Math.max(2, 3.4 * s);
+      let dx0 = hd.x + fx * 3.4 * s, dy0 = hd.y - 3 * s;
+      for (const h of m.hair) {
+        const hp3 = px2(h.x, h.y);
+        ctx.beginPath(); ctx.moveTo(dx0, dy0); ctx.lineTo(hp3.x, hp3.y); ctx.stroke();
+        dx0 = hp3.x; dy0 = hp3.y;
+      }
+    }
+  } else if (HS === 'alexi') {   // center part + curtains framing the face
+    ctx.strokeStyle = flash ? '#fff' : L.hair;
+    ctx.lineWidth = Math.max(2, 3.4 * s);
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(hd.x + sgn * 5.4 * s, hd.y - 5 * s);
+      ctx.quadraticCurveTo(hd.x + sgn * 7.6 * s, hd.y + 2 * s, hd.x + sgn * 6 * s, hd.y + 9 * s);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.lineWidth = Math.max(1, 1.2 * s);
+    ctx.beginPath(); ctx.moveTo(hd.x, hd.y - 8.4 * s); ctx.lineTo(hd.x, hd.y - 5.4 * s); ctx.stroke();
+  } else if (HS === 'halfshave') {   // one proud side, one shaved side
+    ctx.beginPath();
+    ctx.arc(hd.x, hd.y - 2 * s, 6.9 * s, Math.PI * 0.75, Math.PI * 1.62);
+    ctx.lineTo(hd.x, hd.y - 2 * s);
+    ctx.closePath(); ctx.fill();
+  } else if (HS !== 'bald' && !m.hair) {
     ctx.beginPath(); ctx.arc(hd.x, hd.y - 2.4 * s, 6.6 * s, Math.PI, 0); ctx.fill();
   }
   // near arm (in front)
   drawArm(m, nearArm, s, px2, flash, false);
-  // the V guitar, slung in FRONT of the body (Luke's pride and joy)
-  if (L.prop === 'vguitar') {
+  // whatever's in the player's hand (bottle etc.) rides in front of the arm
+  if (m.isPlayer && held) {
+    const IT = ITEM_TYPES[held.type];
+    if (IT.drawHeld) IT.drawHeld(m, px2, s, nearArm);
+  }
+  if (L.controller && !m.ko) {   // Andre's rig: both thumbs busy, antenna up
+    const cc = px2(neckU + kfx * 6, m.h * 0.5);
+    ctx.save();
+    ctx.translate(cc.x, cc.y);
+    ctx.fillStyle = '#20262e';
+    ctx.fillRect(-5 * s, -2.5 * s, 10 * s, 5 * s);
+    ctx.strokeStyle = '#7a8494';
+    ctx.lineWidth = Math.max(1, 1.2 * s);
+    ctx.beginPath(); ctx.moveTo(kfx * 3 * s, -2.5 * s); ctx.lineTo(kfx * 5.5 * s, -8.5 * s); ctx.stroke();
+    ctx.fillStyle = Math.sin(performance.now() / 220) > 0 ? '#7bff9e' : '#144d28';
+    ctx.beginPath(); ctx.arc(-kfx * 2.5 * s, 0, 1 * s, 0, 6.28); ctx.fill();
+    ctx.restore();
+  }
+  // guitars, slung in FRONT of the body — Luke's pride, or your loot
+  const prop = L.prop || (m.isPlayer && held && ITEM_TYPES[held.type].prop) || null;
+  if (prop === 'vguitar' || prop === 'bassg' || prop === 'acg') {
     const gx = px2(neckU + kfx * 5, hipY + 7);
     ctx.save();
     ctx.translate(gx.x, gx.y);
-    ctx.rotate(kfx * (-0.5 + Math.sin(m.bangPhase) * 0.06));
+    // smashT: hoisted overhead and brought DOWN across the smash arc
+    const smash = (m.smashT || 0) > 0 ? Math.sin((1 - m.smashT / 0.38) * Math.PI) : 0;
+    ctx.rotate(kfx * (-0.5 + Math.sin(m.bangPhase) * 0.06 - smash * 2.2));
     const u = s * 1.3;
-    ctx.strokeStyle = '#2a2018';
-    ctx.lineWidth = Math.max(2, 2 * u);
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-kfx * 22 * u, -12 * u); ctx.stroke();
-    ctx.fillStyle = '#0d0b0e';   // headstock
-    ctx.fillRect(-kfx * 24 * u - (kfx > 0 ? 0 : 5 * u), -15 * u, 5 * u, 5 * u);
-    ctx.fillStyle = '#efe8dc';   // the white V
-    ctx.strokeStyle = '#141216';
-    ctx.lineWidth = Math.max(1, 1.1 * u);
-    ctx.beginPath();
-    ctx.moveTo(-kfx * 2 * u, -4 * u);
-    ctx.lineTo(kfx * 18 * u, 9 * u);
-    ctx.lineTo(kfx * 8.5 * u, 0.8 * u);
-    ctx.lineTo(kfx * 16 * u, -10 * u);
-    ctx.closePath();
-    ctx.fill(); ctx.stroke();
+    if (prop === 'vguitar') {
+      ctx.strokeStyle = '#2a2018';
+      ctx.lineWidth = Math.max(2, 2 * u);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-kfx * 22 * u, -12 * u); ctx.stroke();
+      ctx.fillStyle = '#0d0b0e';   // headstock
+      ctx.fillRect(-kfx * 24 * u - (kfx > 0 ? 0 : 5 * u), -15 * u, 5 * u, 5 * u);
+      ctx.fillStyle = '#efe8dc';   // the white V
+      ctx.strokeStyle = '#141216';
+      ctx.lineWidth = Math.max(1, 1.1 * u);
+      ctx.beginPath();
+      ctx.moveTo(-kfx * 2 * u, -4 * u);
+      ctx.lineTo(kfx * 18 * u, 9 * u);
+      ctx.lineTo(kfx * 8.5 * u, 0.8 * u);
+      ctx.lineTo(kfx * 16 * u, -10 * u);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else if (prop === 'bassg') {   // long neck, sunburst body, pure low end
+      ctx.strokeStyle = '#1c1410';
+      ctx.lineWidth = Math.max(2, 2.2 * u);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-kfx * 28 * u, -14 * u); ctx.stroke();
+      ctx.fillStyle = '#0d0b0e';
+      ctx.fillRect(-kfx * 30 * u - (kfx > 0 ? 0 : 5 * u), -17 * u, 5 * u, 5 * u);
+      ctx.fillStyle = '#3a2010';   // sunburst rim
+      ctx.beginPath(); ctx.ellipse(kfx * 9 * u, 1.5 * u, 8.5 * u, 6.8 * u, kfx * 0.25, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#c87a2e';   // sunburst heart
+      ctx.beginPath(); ctx.ellipse(kfx * 9 * u, 1.5 * u, 5.4 * u, 4 * u, kfx * 0.25, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = '#e8e0d0';
+      ctx.lineWidth = Math.max(1, 0.7 * u);
+      ctx.beginPath(); ctx.moveTo(kfx * 13 * u, 1.5 * u); ctx.lineTo(-kfx * 26 * u, -13 * u); ctx.stroke();
+    } else {   // acoustic: warm wood, big hips, a hole where the mosh should be
+      ctx.strokeStyle = '#2a2018';
+      ctx.lineWidth = Math.max(2, 2 * u);
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-kfx * 20 * u, -11 * u); ctx.stroke();
+      ctx.fillStyle = '#0d0b0e';
+      ctx.fillRect(-kfx * 22 * u - (kfx > 0 ? 0 : 5 * u), -14 * u, 5 * u, 5 * u);
+      ctx.fillStyle = '#b8874a';
+      ctx.beginPath(); ctx.ellipse(kfx * 9 * u, 2 * u, 9.5 * u, 7.6 * u, kfx * 0.22, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#2a1a0c';   // sound hole
+      ctx.beginPath(); ctx.arc(kfx * 6.5 * u, 0.6 * u, 3 * u, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = '#efe4d0';
+      ctx.lineWidth = Math.max(1, 0.7 * u);
+      ctx.beginPath(); ctx.moveTo(kfx * 12 * u, 2 * u); ctx.lineTo(-kfx * 18 * u, -10 * u); ctx.stroke();
+    }
     ctx.restore();
   }
   if (m.boss) {   // boss nameplate + health bar
@@ -652,6 +805,8 @@ function drawHud() {
     ctx.fillStyle = '#7bff9e';
     ctx.fillText(combo + 'x COMBO', W / 2, topPad + 40);
   }
+  drawDrunkHud(pad, topPad, bw);   // the third meter: liquid confidence
+  drawItemHud();                   // held item chip + bar prompt
   // ability cooldown chips — one per loadout slot (desktop; touch gets DOM buttons)
   if (!isTouch) {
     let ax0 = pad + 24;

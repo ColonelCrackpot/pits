@@ -15,6 +15,7 @@ window.addEventListener('keydown', e => {
   if (state === 'run') {
     const slot = SLOT_CODES.indexOf(e.code);
     if (slot >= 0) useSlot(slot);
+    if (e.code === 'KeyF') itemAction();   // use held item / order at the bar
   }
 });
 window.addEventListener('keyup', e => { kb[e.code] = false; });
@@ -59,6 +60,10 @@ SLOT_BTN.forEach((btnId, i) => {
   $(btnId).addEventListener('pointerdown', e => {
     e.preventDefault(); e.stopPropagation(); audioInit(); useSlot(i);
   });
+});
+// the contextual item button: chug / smash / order — whatever F would do
+$('itemBtn').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation(); audioInit(); itemAction();
 });
 function updateAbBtns() {
   SLOT_BTN.forEach((btnId, i) => {

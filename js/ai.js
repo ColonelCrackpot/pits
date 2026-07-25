@@ -26,6 +26,7 @@ function think(m) {
   let best = null, bd = 260;
   for (const o of moshers) {
     if (o === m || o.ko || o.dead) continue;
+    if (o.isPlayer && mellowT > 0) continue;   // acoustic truce: nobody picks YOU
     if (o.isPlayer && huntersOnPlayer >= 2 && m.target !== o) continue;
     const d = hyp(o.x - m.x, o.z - m.z) * (o.isPlayer ? 1.15 : 1);
     if (d < bd) { bd = d; best = o; }
